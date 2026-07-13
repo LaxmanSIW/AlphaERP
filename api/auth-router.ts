@@ -5,6 +5,7 @@ import {
   createLocalAuthToken,
   serializeAuthCookie,
   serializeClearCookie,
+  changePassword,
 } from "./local-auth";
 
 export const authRouter = createRouter({
@@ -37,6 +38,23 @@ export const authRouter = createRouter({
           role: "admin",
           email: `${input.username}@local`,
         },
+      };
+    }),
+
+  changePassword: authedQuery
+    .input(
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(4),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const username = ctx.user?.name || "admin";
+      const updated = changePassword(username, input.currentPassword, input.newPassword);
+
+      return {
+        success: true,
+        username: updated.username,
       };
     }),
 

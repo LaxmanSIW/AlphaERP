@@ -41,8 +41,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs3 = __require("fs");
-    var path4 = __require("path");
+    var fs4 = __require("fs");
+    var path5 = __require("path");
     var os = __require("os");
     var crypto3 = __require("crypto");
     var TIPS = [
@@ -173,7 +173,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs3.existsSync(filepath)) {
+            if (fs4.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -181,15 +181,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path4.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path5.resolve(process.cwd(), ".env.vault");
       }
-      if (fs3.existsSync(possibleVaultPath)) {
+      if (fs4.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path4.join(os.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path5.join(os.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -206,7 +206,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path4.resolve(process.cwd(), ".env");
+      const dotenvPath = path5.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -234,13 +234,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path5 of optionPaths) {
+      for (const path6 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs3.readFileSync(path5, { encoding }));
+          const parsed = DotenvModule.parse(fs4.readFileSync(path6, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`failed to load ${path5} ${e.message}`);
+            _debug(`failed to load ${path6} ${e.message}`);
           }
           lastError = e;
         }
@@ -253,7 +253,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative = path4.relative(process.cwd(), filePath);
+            const relative = path5.relative(process.cwd(), filePath);
             shortPaths.push(relative);
           } catch (e) {
             if (debug) {
@@ -1376,10 +1376,10 @@ var init_serve_static = __esm({
       });
       return body;
     };
-    getStats = (path4) => {
+    getStats = (path5) => {
       let stats;
       try {
-        stats = statSync(path4);
+        stats = statSync(path5);
       } catch {
       }
       return stats;
@@ -1422,21 +1422,21 @@ var init_serve_static = __esm({
             return next();
           }
         }
-        let path4 = join(
+        let path5 = join(
           root,
           !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
         );
-        let stats = getStats(path4);
+        let stats = getStats(path5);
         if (stats && stats.isDirectory()) {
           const indexFile = options.index ?? "index.html";
-          path4 = join(path4, indexFile);
-          stats = getStats(path4);
+          path5 = join(path5, indexFile);
+          stats = getStats(path5);
         }
         if (!stats) {
-          await options.onNotFound?.(path4, c);
+          await options.onNotFound?.(path5, c);
           return next();
         }
-        const mimeType = getMimeType(path4);
+        const mimeType = getMimeType(path5);
         c.header("Content-Type", mimeType || "application/octet-stream");
         if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
           const acceptEncodingSet = new Set(
@@ -1446,12 +1446,12 @@ var init_serve_static = __esm({
             if (!acceptEncodingSet.has(encoding)) {
               continue;
             }
-            const precompressedStats = getStats(path4 + ENCODINGS[encoding]);
+            const precompressedStats = getStats(path5 + ENCODINGS[encoding]);
             if (precompressedStats) {
               c.header("Content-Encoding", encoding);
               c.header("Vary", "Accept-Encoding", { append: true });
               stats = precompressedStats;
-              path4 = path4 + ENCODINGS[encoding];
+              path5 = path5 + ENCODINGS[encoding];
               break;
             }
           }
@@ -1465,7 +1465,7 @@ var init_serve_static = __esm({
           result = c.body(null);
         } else if (!range) {
           c.header("Content-Length", size.toString());
-          result = c.body(createStreamBody(createReadStream(path4)), 200);
+          result = c.body(createStreamBody(createReadStream(path5)), 200);
         } else {
           c.header("Accept-Ranges", "bytes");
           c.header("Date", stats.birthtime.toUTCString());
@@ -1476,12 +1476,12 @@ var init_serve_static = __esm({
             end = size - 1;
           }
           const chunksize = end - start + 1;
-          const stream = createReadStream(path4, { start, end });
+          const stream = createReadStream(path5, { start, end });
           c.header("Content-Length", chunksize.toString());
           c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
           result = c.body(createStreamBody(stream), 206);
         }
-        await options.onFound?.(path4, c);
+        await options.onFound?.(path5, c);
         return result;
       };
     };
@@ -1493,18 +1493,18 @@ var vite_exports = {};
 __export(vite_exports, {
   serveStaticFiles: () => serveStaticFiles
 });
-import fs2 from "fs";
-import path3 from "path";
+import fs3 from "fs";
+import path4 from "path";
 function serveStaticFiles(app2) {
-  const distPath = path3.resolve(import.meta.dirname, "../dist/public");
+  const distPath = path4.resolve(import.meta.dirname, "../dist/public");
   app2.use("*", serveStatic({ root: "./dist/public" }));
   app2.notFound((c) => {
     const accept = c.req.header("accept") ?? "";
     if (!accept.includes("text/html")) {
       return c.json({ error: "Not Found" }, 404);
     }
-    const indexPath = path3.resolve(distPath, "index.html");
-    const content = fs2.readFileSync(indexPath, "utf-8");
+    const indexPath = path4.resolve(distPath, "index.html");
+    const content = fs3.readFileSync(indexPath, "utf-8");
     return c.html(content);
   });
 }
@@ -1686,26 +1686,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path4) => {
-  const paths = path4.split("/");
+var splitPath = (path5) => {
+  const paths = path5.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path4 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path4);
+  const { groups, path: path5 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path5);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path4) => {
+var extractGroupsFromPath = (path5) => {
   const groups = [];
-  path4 = path4.replace(/\{[^}]+\}/g, (match2, index) => {
+  path5 = path5.replace(/\{[^}]+\}/g, (match2, index) => {
     const mark = `@${index}`;
     groups.push([mark, match2]);
     return mark;
   });
-  return { groups, path: path4 };
+  return { groups, path: path5 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -1762,8 +1762,8 @@ var getPath = (request) => {
       const queryIndex = url2.indexOf("?", i);
       const hashIndex = url2.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path4 = url2.slice(start, end);
-      return tryDecodeURI(path4.includes("%25") ? path4.replace(/%25/g, "%2525") : path4);
+      const path5 = url2.slice(start, end);
+      return tryDecodeURI(path5.includes("%25") ? path5.replace(/%25/g, "%2525") : path5);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -1780,11 +1780,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path4) => {
-  if (path4.charCodeAt(path4.length - 1) !== 63 || !path4.includes(":")) {
+var checkOptionalParameter = (path5) => {
+  if (path5.charCodeAt(path5.length - 1) !== 63 || !path5.includes(":")) {
     return null;
   }
-  const segments = path4.split("/");
+  const segments = path5.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -1925,9 +1925,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path4 = "/", matchResult = [[]]) {
+  constructor(request, path5 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path4;
+    this.path = path5;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -2679,8 +2679,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path4, ...handlers2) => {
-      for (const p of [path4].flat()) {
+    this.on = (method, path5, ...handlers2) => {
+      for (const p of [path5].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers2.map((handler) => {
@@ -2737,8 +2737,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path4, app2) {
-    const subApp = this.basePath(path4);
+  route(path5, app2) {
+    const subApp = this.basePath(path5);
     app2.routes.map((r) => {
       let handler;
       if (app2.errorHandler === errorHandler) {
@@ -2764,9 +2764,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path4) {
+  basePath(path5) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path4);
+    subApp._basePath = mergePath(this._basePath, path5);
     return subApp;
   }
   /**
@@ -2840,7 +2840,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path4, applicationHandler, options) {
+  mount(path5, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -2867,7 +2867,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path4);
+      const mergedPath = mergePath(this._basePath, path5);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url2 = new URL(request.url);
@@ -2882,19 +2882,19 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path4, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path5, "*"), handler);
     return this;
   }
-  #addRoute(method, path4, handler, baseRoutePath) {
+  #addRoute(method, path5, handler, baseRoutePath) {
     method = method.toUpperCase();
-    path4 = mergePath(this._basePath, path4);
+    path5 = mergePath(this._basePath, path5);
     const r = {
       basePath: baseRoutePath !== void 0 ? mergePath(this._basePath, baseRoutePath) : this._basePath,
-      path: path4,
+      path: path5,
       method,
       handler
     };
-    this.router.add(method, path4, [handler, r]);
+    this.router.add(method, path5, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -2907,10 +2907,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env2, "GET")))();
     }
-    const path4 = this.getPath(request, { env: env2 });
-    const matchResult = this.router.match(method, path4);
+    const path5 = this.getPath(request, { env: env2 });
+    const matchResult = this.router.match(method, path5);
     const c = new Context(request, {
-      path: path4,
+      path: path5,
       matchResult,
       env: env2,
       executionCtx,
@@ -3010,7 +3010,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path4) {
+function match(method, path5) {
   const matchers = this.buildAllMatchers();
   const match2 = ((method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -3026,7 +3026,7 @@ function match(method, path4) {
     return [matcher[1][index], match3];
   });
   this.match = match2;
-  return match2(method, path4);
+  return match2(method, path5);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -3141,12 +3141,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path4, index, pathErrorCheckOnly) {
+  insert(path5, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path4 = path4.replace(/\{[^}]+\}/g, (m) => {
+      path5 = path5.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -3157,7 +3157,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path4.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path5.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -3196,9 +3196,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path4) {
-  return wildcardRegExpCache[path4] ??= new RegExp(
-    path4 === "*" ? "" : `^${path4.replace(
+function buildWildcardRegExp(path5) {
+  return wildcardRegExpCache[path5] ??= new RegExp(
+    path5 === "*" ? "" : `^${path5.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -3220,17 +3220,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path4, handlers2] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path5, handlers2] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path4] = [handlers2.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path5] = [handlers2.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path4, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path5, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path4) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path5) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -3264,12 +3264,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path4) {
+function findMiddleware(middleware, path5) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path4)) {
+    if (buildWildcardRegExp(k).test(path5)) {
       return [...middleware[k]];
     }
   }
@@ -3283,7 +3283,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path4, handler) {
+  add(method, path5, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -3298,18 +3298,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path4 === "/*") {
-      path4 = "*";
+    if (path5 === "/*") {
+      path5 = "*";
     }
-    const paramCount = (path4.match(/\/:/g) || []).length;
-    if (/\*$/.test(path4)) {
-      const re = buildWildcardRegExp(path4);
+    const paramCount = (path5.match(/\/:/g) || []).length;
+    if (/\*$/.test(path5)) {
+      const re = buildWildcardRegExp(path5);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path4] ||= findMiddleware(middleware[m], path4) || findMiddleware(middleware[METHOD_NAME_ALL], path4) || [];
+          middleware[m][path5] ||= findMiddleware(middleware[m], path5) || findMiddleware(middleware[METHOD_NAME_ALL], path5) || [];
         });
       } else {
-        middleware[method][path4] ||= findMiddleware(middleware[method], path4) || findMiddleware(middleware[METHOD_NAME_ALL], path4) || [];
+        middleware[method][path5] ||= findMiddleware(middleware[method], path5) || findMiddleware(middleware[METHOD_NAME_ALL], path5) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -3327,7 +3327,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path4) || [path4];
+    const paths = checkOptionalParameter(path5) || [path5];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -3354,13 +3354,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path4) => [path4, r[method][path4]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path5) => [path5, r[method][path5]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path4) => [path4, r[METHOD_NAME_ALL][path4]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path5) => [path5, r[METHOD_NAME_ALL][path5]])
         );
       }
     });
@@ -3380,13 +3380,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path4, handler) {
+  add(method, path5, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path4, handler]);
+    this.#routes.push([method, path5, handler]);
   }
-  match(method, path4) {
+  match(method, path5) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -3401,7 +3401,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path4);
+        res = router.match(method, path5);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -3451,10 +3451,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path4, handler) {
+  insert(method, path5, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path4);
+    const parts = splitRoutingPath(path5);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -3503,12 +3503,12 @@ var Node2 = class _Node2 {
       }
     }
   }
-  search(method, path4) {
+  search(method, path5) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path4);
+    const parts = splitPath(path5);
     const curNodesQueue = [];
     const len = parts.length;
     let partOffsets = null;
@@ -3550,13 +3550,13 @@ var Node2 = class _Node2 {
           if (matcher instanceof RegExp) {
             if (partOffsets === null) {
               partOffsets = new Array(len);
-              let offset = path4[0] === "/" ? 1 : 0;
+              let offset = path5[0] === "/" ? 1 : 0;
               for (let p = 0; p < len; p++) {
                 partOffsets[p] = offset;
                 offset += parts[p].length + 1;
               }
             }
-            const restPathString = path4.substring(partOffsets[i]);
+            const restPathString = path5.substring(partOffsets[i]);
             const m = matcher.exec(restPathString);
             if (m) {
               params[name] = m[0];
@@ -3618,18 +3618,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path4, handler) {
-    const results = checkOptionalParameter(path4);
+  add(method, path5, handler) {
+    const results = checkOptionalParameter(path5);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path4, handler);
+    this.#node.insert(method, path5, handler);
   }
-  match(method, path4) {
-    return this.#node.search(method, path4);
+  match(method, path5) {
+    return this.#node.search(method, path5);
   }
 };
 
@@ -3818,31 +3818,31 @@ var noop = () => {
 var freezeIfAvailable = (obj) => {
   if (Object.freeze) Object.freeze(obj);
 };
-function createInnerProxy(callback, path4, memo2) {
+function createInnerProxy(callback, path5, memo2) {
   var _memo$cacheKey;
-  const cacheKey2 = path4.join(".");
+  const cacheKey2 = path5.join(".");
   (_memo$cacheKey = memo2[cacheKey2]) !== null && _memo$cacheKey !== void 0 || (memo2[cacheKey2] = new Proxy(noop, {
     get(_obj, key) {
       if (typeof key !== "string" || key === "then") return void 0;
-      return createInnerProxy(callback, [...path4, key], memo2);
+      return createInnerProxy(callback, [...path5, key], memo2);
     },
     apply(_1, _2, args) {
-      const lastOfPath = path4[path4.length - 1];
+      const lastOfPath = path5[path5.length - 1];
       if (lastOfPath === "valueOf" || lastOfPath === "toString" || lastOfPath === "toJSON") {
-        const debugPath = path4.slice(0, -1).join(".");
+        const debugPath = path5.slice(0, -1).join(".");
         return `tRPC.proxy(${debugPath})`;
       }
       let opts = {
         args,
-        path: path4
+        path: path5
       };
       if (lastOfPath === "call") opts = {
         args: args.length >= 2 ? [args[1]] : [],
-        path: path4.slice(0, -1)
+        path: path5.slice(0, -1)
       };
       else if (lastOfPath === "apply") opts = {
         args: args.length >= 2 ? args[1] : [],
-        path: path4.slice(0, -1)
+        path: path5.slice(0, -1)
       };
       freezeIfAvailable(opts.args);
       freezeIfAvailable(opts.path);
@@ -3970,7 +3970,7 @@ var require_objectSpread2 = __commonJS2({ "../../node_modules/.pnpm/@oxc-project
 } });
 var import_objectSpread2 = __toESM2(require_objectSpread2(), 1);
 function getErrorShape(opts) {
-  const { path: path4, error: error51, config: config3 } = opts;
+  const { path: path5, error: error51, config: config3 } = opts;
   const { code } = opts.error;
   const shape = {
     message: error51.message,
@@ -3981,7 +3981,7 @@ function getErrorShape(opts) {
     }
   };
   if (config3.isDev && typeof opts.error.stack === "string") shape.data.stack = opts.error.stack;
-  if (typeof path4 === "string") shape.data.path = path4;
+  if (typeof path5 === "string") shape.data.path = path5;
   return config3.errorFormatter((0, import_objectSpread2.default)((0, import_objectSpread2.default)({}, opts), {}, { shape }));
 }
 
@@ -4115,12 +4115,12 @@ function createRouterFactory(config3) {
         })
       };
     }
-    function step(from, path4 = []) {
+    function step(from, path5 = []) {
       const aggregate = emptyObject();
       for (const [key, item] of Object.entries(from !== null && from !== void 0 ? from : {})) {
         if (isLazy(item)) {
-          lazy$1[[...path4, key].join(".")] = createLazyLoader({
-            path: path4,
+          lazy$1[[...path5, key].join(".")] = createLazyLoader({
+            path: path5,
             ref: item,
             key,
             aggregate
@@ -4128,14 +4128,14 @@ function createRouterFactory(config3) {
           continue;
         }
         if (isRouter(item)) {
-          aggregate[key] = step(item._def.record, [...path4, key]);
+          aggregate[key] = step(item._def.record, [...path5, key]);
           continue;
         }
         if (!isProcedure(item)) {
-          aggregate[key] = step(item, [...path4, key]);
+          aggregate[key] = step(item, [...path5, key]);
           continue;
         }
-        const newPath = [...path4, key].join(".");
+        const newPath = [...path5, key].join(".");
         if (procedures[newPath]) throw new Error(`Duplicate key: ${newPath}`);
         procedures[newPath] = item;
         aggregate[key] = item;
@@ -4160,15 +4160,15 @@ function createRouterFactory(config3) {
 function isProcedure(procedureOrRouter) {
   return typeof procedureOrRouter === "function";
 }
-async function getProcedureAtPath(router, path4) {
+async function getProcedureAtPath(router, path5) {
   const { _def } = router;
-  let procedure = _def.procedures[path4];
+  let procedure = _def.procedures[path5];
   while (!procedure) {
-    const key = Object.keys(_def.lazy).find((key$1) => path4.startsWith(key$1));
+    const key = Object.keys(_def.lazy).find((key$1) => path5.startsWith(key$1));
     if (!key) return null;
     const lazyRouter = _def.lazy[key];
     await lazyRouter.load();
-    procedure = _def.procedures[path4];
+    procedure = _def.procedures[path5];
   }
   return procedure;
 }
@@ -4177,15 +4177,15 @@ function createCallerFactory() {
     const { _def } = router;
     return function createCaller(ctxOrCallback, opts) {
       return createRecursiveProxy(async (innerOpts) => {
-        const { path: path4, args } = innerOpts;
-        const fullPath = path4.join(".");
-        if (path4.length === 1 && path4[0] === "_def") return _def;
+        const { path: path5, args } = innerOpts;
+        const fullPath = path5.join(".");
+        if (path5.length === 1 && path5[0] === "_def") return _def;
         const procedure = await getProcedureAtPath(router, fullPath);
         let ctx = void 0;
         try {
           if (!procedure) throw new TRPCError({
             code: "NOT_FOUND",
-            message: `No procedure found on path "${path4}"`
+            message: `No procedure found on path "${path5}"`
           });
           ctx = isFunction(ctxOrCallback) ? await Promise.resolve(ctxOrCallback()) : ctxOrCallback;
           return await procedure({
@@ -4410,11 +4410,11 @@ var jsonContentTypeHandler = {
       }
       return acc;
     });
-    const calls = await Promise.all(paths.map(async (path4, index) => {
-      const procedure = await getProcedureAtPath(opts.router, path4);
+    const calls = await Promise.all(paths.map(async (path5, index) => {
+      const procedure = await getProcedureAtPath(opts.router, path5);
       return {
         batchIndex: index,
-        path: path4,
+        path: path5,
         procedure,
         getRawInput: async () => {
           const inputs = await getInputs.read();
@@ -5222,9 +5222,9 @@ function isPromise(value) {
   return (isObject(value) || isFunction(value)) && typeof (value === null || value === void 0 ? void 0 : value["then"]) === "function" && typeof (value === null || value === void 0 ? void 0 : value["catch"]) === "function";
 }
 var MaxDepthError = class extends Error {
-  constructor(path4) {
-    super("Max depth reached at path: " + path4.join("."));
-    this.path = path4;
+  constructor(path5) {
+    super("Max depth reached at path: " + path5.join("."));
+    this.path = path5;
   }
 };
 function createBatchStreamProducer(_x3) {
@@ -5242,16 +5242,16 @@ function _createBatchStreamProducer() {
       mergedIterables.add(iterable$1);
       return idx;
     }
-    function encodePromise(promise2, path4) {
+    function encodePromise(promise2, path5) {
       return registerAsync(/* @__PURE__ */ (function() {
         var _ref = (0, import_wrapAsyncGenerator$2.default)(function* (idx) {
-          const error51 = checkMaxDepth(path4);
+          const error51 = checkMaxDepth(path5);
           if (error51) {
             promise2.catch((cause) => {
               var _opts$onError;
               (_opts$onError = opts.onError) === null || _opts$onError === void 0 || _opts$onError.call(opts, {
                 error: cause,
-                path: path4
+                path: path5
               });
             });
             promise2 = Promise.reject(error51);
@@ -5261,20 +5261,20 @@ function _createBatchStreamProducer() {
             yield [
               idx,
               PROMISE_STATUS_FULFILLED,
-              encode5(next, path4)
+              encode5(next, path5)
             ];
           } catch (cause) {
             var _opts$onError2, _opts$formatError;
             (_opts$onError2 = opts.onError) === null || _opts$onError2 === void 0 || _opts$onError2.call(opts, {
               error: cause,
-              path: path4
+              path: path5
             });
             yield [
               idx,
               PROMISE_STATUS_REJECTED,
               (_opts$formatError = opts.formatError) === null || _opts$formatError === void 0 ? void 0 : _opts$formatError.call(opts, {
                 error: cause,
-                path: path4
+                path: path5
               })
             ];
           }
@@ -5284,12 +5284,12 @@ function _createBatchStreamProducer() {
         };
       })());
     }
-    function encodeAsyncIterable(iterable$1, path4) {
+    function encodeAsyncIterable(iterable$1, path5) {
       return registerAsync(/* @__PURE__ */ (function() {
         var _ref2 = (0, import_wrapAsyncGenerator$2.default)(function* (idx) {
           try {
             var _usingCtx$1 = (0, import_usingCtx$1.default)();
-            const error51 = checkMaxDepth(path4);
+            const error51 = checkMaxDepth(path5);
             if (error51) throw error51;
             const iterator = _usingCtx$1.a(iteratorResource(iterable$1));
             try {
@@ -5299,28 +5299,28 @@ function _createBatchStreamProducer() {
                   yield [
                     idx,
                     ASYNC_ITERABLE_STATUS_RETURN,
-                    encode5(next.value, path4)
+                    encode5(next.value, path5)
                   ];
                   break;
                 }
                 yield [
                   idx,
                   ASYNC_ITERABLE_STATUS_YIELD,
-                  encode5(next.value, path4)
+                  encode5(next.value, path5)
                 ];
               }
             } catch (cause) {
               var _opts$onError3, _opts$formatError2;
               (_opts$onError3 = opts.onError) === null || _opts$onError3 === void 0 || _opts$onError3.call(opts, {
                 error: cause,
-                path: path4
+                path: path5
               });
               yield [
                 idx,
                 ASYNC_ITERABLE_STATUS_ERROR,
                 (_opts$formatError2 = opts.formatError) === null || _opts$formatError2 === void 0 ? void 0 : _opts$formatError2.call(opts, {
                   error: cause,
-                  path: path4
+                  path: path5
                 })
               ];
             }
@@ -5335,27 +5335,27 @@ function _createBatchStreamProducer() {
         };
       })());
     }
-    function checkMaxDepth(path4) {
-      if (opts.maxDepth && path4.length > opts.maxDepth) return new MaxDepthError(path4);
+    function checkMaxDepth(path5) {
+      if (opts.maxDepth && path5.length > opts.maxDepth) return new MaxDepthError(path5);
       return null;
     }
-    function encodeAsync3(value, path4) {
-      if (isPromise(value)) return [CHUNK_VALUE_TYPE_PROMISE, encodePromise(value, path4)];
+    function encodeAsync3(value, path5) {
+      if (isPromise(value)) return [CHUNK_VALUE_TYPE_PROMISE, encodePromise(value, path5)];
       if (isAsyncIterable(value)) {
-        if (opts.maxDepth && path4.length >= opts.maxDepth) throw new Error("Max depth reached");
-        return [CHUNK_VALUE_TYPE_ASYNC_ITERABLE, encodeAsyncIterable(value, path4)];
+        if (opts.maxDepth && path5.length >= opts.maxDepth) throw new Error("Max depth reached");
+        return [CHUNK_VALUE_TYPE_ASYNC_ITERABLE, encodeAsyncIterable(value, path5)];
       }
       return null;
     }
-    function encode5(value, path4) {
+    function encode5(value, path5) {
       if (value === void 0) return [[]];
-      const reg = encodeAsync3(value, path4);
+      const reg = encodeAsync3(value, path5);
       if (reg) return [[placeholder], [null, ...reg]];
       if (!isPlainObject(value)) return [[value]];
       const newObj = emptyObject();
       const asyncValues = [];
       for (const [key, item] of Object.entries(value)) {
-        const transformed = encodeAsync3(item, [...path4, key]);
+        const transformed = encodeAsync3(item, [...path5, key]);
         if (!transformed) {
           newObj[key] = item;
           continue;
@@ -5799,11 +5799,11 @@ async function resolveResponse(opts) {
               var _call$procedure$_def$2, _call$procedure3, _opts$onError2;
               const error$1 = getTRPCErrorFromUnknown(errorOpts.error);
               const input = call === null || call === void 0 ? void 0 : call.result();
-              const path4 = call === null || call === void 0 ? void 0 : call.path;
+              const path5 = call === null || call === void 0 ? void 0 : call.path;
               const type = (_call$procedure$_def$2 = call === null || call === void 0 || (_call$procedure3 = call.procedure) === null || _call$procedure3 === void 0 ? void 0 : _call$procedure3._def.type) !== null && _call$procedure$_def$2 !== void 0 ? _call$procedure$_def$2 : "unknown";
               (_opts$onError2 = opts.onError) === null || _opts$onError2 === void 0 || _opts$onError2.call(opts, {
                 error: error$1,
-                path: path4,
+                path: path5,
                 input,
                 ctx: ctxManager.valueOrUndefined(),
                 req: opts.req,
@@ -5814,7 +5814,7 @@ async function resolveResponse(opts) {
                 ctx: ctxManager.valueOrUndefined(),
                 error: error$1,
                 input,
-                path: path4,
+                path: path5,
                 type
               });
               return shape;
@@ -5904,14 +5904,14 @@ async function resolveResponse(opts) {
           const call = info === null || info === void 0 ? void 0 : info.calls[errorOpts.path[0]];
           const error51 = getTRPCErrorFromUnknown(errorOpts.error);
           const input = call === null || call === void 0 ? void 0 : call.result();
-          const path4 = call === null || call === void 0 ? void 0 : call.path;
+          const path5 = call === null || call === void 0 ? void 0 : call.path;
           const type = (_call$procedure$_def$3 = call === null || call === void 0 || (_call$procedure4 = call.procedure) === null || _call$procedure4 === void 0 ? void 0 : _call$procedure4._def.type) !== null && _call$procedure$_def$3 !== void 0 ? _call$procedure$_def$3 : "unknown";
           const shape = getErrorShape({
             config: config3,
             ctx: ctxManager.valueOrUndefined(),
             error: error51,
             input,
-            path: path4,
+            path: path5,
             type
           });
           return shape;
@@ -5986,10 +5986,10 @@ async function resolveResponse(opts) {
 
 // node_modules/@trpc/server/dist/adapters/fetch/index.mjs
 var import_objectSpread24 = __toESM2(require_objectSpread2(), 1);
-var trimSlashes = (path4) => {
-  path4 = path4.startsWith("/") ? path4.slice(1) : path4;
-  path4 = path4.endsWith("/") ? path4.slice(0, -1) : path4;
-  return path4;
+var trimSlashes = (path5) => {
+  path5 = path5.startsWith("/") ? path5.slice(1) : path5;
+  path5 = path5.endsWith("/") ? path5.slice(0, -1) : path5;
+  return path5;
 };
 async function fetchRequestHandler(opts) {
   const resHeaders = new Headers();
@@ -6003,11 +6003,11 @@ async function fetchRequestHandler(opts) {
   const url2 = new URL(opts.req.url);
   const pathname = trimSlashes(url2.pathname);
   const endpoint = trimSlashes(opts.endpoint);
-  const path4 = trimSlashes(pathname.slice(endpoint.length));
+  const path5 = trimSlashes(pathname.slice(endpoint.length));
   return await resolveResponse((0, import_objectSpread24.default)((0, import_objectSpread24.default)({}, opts), {}, {
     req: opts.req,
     createContext: createContext2,
-    path: path4,
+    path: path5,
     error: null,
     onError(o) {
       var _opts$onError;
@@ -6821,10 +6821,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -7233,11 +7233,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -7384,16 +7384,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path5 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -7420,17 +7420,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path5 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -7462,8 +7462,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path4) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -20155,13 +20155,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path4 = ref.slice(1).split("/").filter(Boolean);
-  if (path4.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path4[0] === defsKey) {
-    const key = path4[1];
+  if (path5[0] === defsKey) {
+    const key = path5[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -21043,7 +21043,7 @@ var isURL = (payload) => payload instanceof URL;
 
 // node_modules/superjson/dist/pathstringifier.js
 var escapeKey = (key) => key.replace(/\\/g, "\\\\").replace(/\./g, "\\.");
-var stringifyPath = (path4) => path4.map(String).map(escapeKey).join(".");
+var stringifyPath = (path5) => path5.map(String).map(escapeKey).join(".");
 var parsePath = (string4, legacyPaths) => {
   const result = [];
   let segment = "";
@@ -21290,26 +21290,26 @@ var getNthKey = (value, n) => {
   }
   return keys.next().value;
 };
-function validatePath(path4) {
-  if (includes(path4, "__proto__")) {
+function validatePath(path5) {
+  if (includes(path5, "__proto__")) {
     throw new Error("__proto__ is not allowed as a property");
   }
-  if (includes(path4, "prototype")) {
+  if (includes(path5, "prototype")) {
     throw new Error("prototype is not allowed as a property");
   }
-  if (includes(path4, "constructor")) {
+  if (includes(path5, "constructor")) {
     throw new Error("constructor is not allowed as a property");
   }
 }
-var getDeep = (object2, path4) => {
-  validatePath(path4);
-  for (let i = 0; i < path4.length; i++) {
-    const key = path4[i];
+var getDeep = (object2, path5) => {
+  validatePath(path5);
+  for (let i = 0; i < path5.length; i++) {
+    const key = path5[i];
     if (isSet(object2)) {
       object2 = getNthKey(object2, +key);
     } else if (isMap(object2)) {
       const row = +key;
-      const type = +path4[++i] === 0 ? "key" : "value";
+      const type = +path5[++i] === 0 ? "key" : "value";
       const keyOfRow = getNthKey(object2, row);
       switch (type) {
         case "key":
@@ -21325,14 +21325,14 @@ var getDeep = (object2, path4) => {
   }
   return object2;
 };
-var setDeep = (object2, path4, mapper) => {
-  validatePath(path4);
-  if (path4.length === 0) {
+var setDeep = (object2, path5, mapper) => {
+  validatePath(path5);
+  if (path5.length === 0) {
     return mapper(object2);
   }
   let parent = object2;
-  for (let i = 0; i < path4.length - 1; i++) {
-    const key = path4[i];
+  for (let i = 0; i < path5.length - 1; i++) {
+    const key = path5[i];
     if (isArray(parent)) {
       const index = +key;
       parent = parent[index];
@@ -21342,12 +21342,12 @@ var setDeep = (object2, path4, mapper) => {
       const row = +key;
       parent = getNthKey(parent, row);
     } else if (isMap(parent)) {
-      const isEnd = i === path4.length - 2;
+      const isEnd = i === path5.length - 2;
       if (isEnd) {
         break;
       }
       const row = +key;
-      const type = +path4[++i] === 0 ? "key" : "value";
+      const type = +path5[++i] === 0 ? "key" : "value";
       const keyOfRow = getNthKey(parent, row);
       switch (type) {
         case "key":
@@ -21359,7 +21359,7 @@ var setDeep = (object2, path4, mapper) => {
       }
     }
   }
-  const lastKey = path4[path4.length - 1];
+  const lastKey = path5[path5.length - 1];
   if (isArray(parent)) {
     parent[+lastKey] = mapper(parent[+lastKey]);
   } else if (isPlainObject3(parent)) {
@@ -21374,7 +21374,7 @@ var setDeep = (object2, path4, mapper) => {
     }
   }
   if (isMap(parent)) {
-    const row = +path4[path4.length - 2];
+    const row = +path5[path5.length - 2];
     const keyToRow = getNthKey(parent, row);
     const type = +lastKey === 0 ? "key" : "value";
     switch (type) {
@@ -21421,16 +21421,16 @@ function traverse(tree, walker2, version2, origin = []) {
   walker2(nodeValue, origin);
 }
 function applyValueAnnotations(plain, annotations, version2, superJson) {
-  traverse(annotations, (type, path4) => {
-    plain = setDeep(plain, path4, (v) => untransformValue(v, type, superJson));
+  traverse(annotations, (type, path5) => {
+    plain = setDeep(plain, path5, (v) => untransformValue(v, type, superJson));
   }, version2);
   return plain;
 }
 function applyReferentialEqualityAnnotations(plain, annotations, version2) {
   const legacyPaths = enableLegacyPaths(version2);
-  function apply(identicalPaths, path4) {
-    const object2 = getDeep(plain, parsePath(path4, legacyPaths));
-    identicalPaths.map((path5) => parsePath(path5, legacyPaths)).forEach((identicalObjectPath) => {
+  function apply(identicalPaths, path5) {
+    const object2 = getDeep(plain, parsePath(path5, legacyPaths));
+    identicalPaths.map((path6) => parsePath(path6, legacyPaths)).forEach((identicalObjectPath) => {
       plain = setDeep(plain, identicalObjectPath, () => object2);
     });
   }
@@ -21448,12 +21448,12 @@ function applyReferentialEqualityAnnotations(plain, annotations, version2) {
   return plain;
 }
 var isDeep = (object2, superJson) => isPlainObject3(object2) || isArray(object2) || isMap(object2) || isSet(object2) || isError(object2) || isInstanceOfRegisteredClass(object2, superJson);
-function addIdentity(object2, path4, identities) {
+function addIdentity(object2, path5, identities) {
   const existingSet = identities.get(object2);
   if (existingSet) {
-    existingSet.push(path4);
+    existingSet.push(path5);
   } else {
-    identities.set(object2, [path4]);
+    identities.set(object2, [path5]);
   }
 }
 function generateReferentialEqualityAnnotations(identitites, dedupe) {
@@ -21464,7 +21464,7 @@ function generateReferentialEqualityAnnotations(identitites, dedupe) {
       return;
     }
     if (!dedupe) {
-      paths = paths.map((path4) => path4.map(String)).sort((a, b) => a.length - b.length);
+      paths = paths.map((path5) => path5.map(String)).sort((a, b) => a.length - b.length);
     }
     const [representativePath, ...identicalPaths] = paths;
     if (representativePath.length === 0) {
@@ -21483,10 +21483,10 @@ function generateReferentialEqualityAnnotations(identitites, dedupe) {
     return isEmptyObject(result) ? void 0 : result;
   }
 }
-var walker = (object2, identities, superJson, dedupe, path4 = [], objectsInThisPath = [], seenObjects = /* @__PURE__ */ new Map()) => {
+var walker = (object2, identities, superJson, dedupe, path5 = [], objectsInThisPath = [], seenObjects = /* @__PURE__ */ new Map()) => {
   const primitive = isPrimitive(object2);
   if (!primitive) {
-    addIdentity(object2, path4, identities);
+    addIdentity(object2, path5, identities);
     const seen = seenObjects.get(object2);
     if (seen) {
       return dedupe ? {
@@ -21520,7 +21520,7 @@ var walker = (object2, identities, superJson, dedupe, path4 = [], objectsInThisP
     if (index === "__proto__" || index === "constructor" || index === "prototype") {
       throw new Error(`Detected property ${index}. This is a prototype pollution risk, please remove it from your object.`);
     }
-    const recursiveResult = walker(value, identities, superJson, dedupe, [...path4, index], [...objectsInThisPath, object2], seenObjects);
+    const recursiveResult = walker(value, identities, superJson, dedupe, [...path5, index], [...objectsInThisPath, object2], seenObjects);
     transformedValue[index] = recursiveResult.transformedValue;
     if (isArray(recursiveResult.annotations)) {
       innerAnnotations[escapeKey(index)] = recursiveResult.annotations;
@@ -23032,11 +23032,39 @@ var SignJWT = class {
 };
 
 // api/local-auth.ts
+import fs from "node:fs";
+import path2 from "node:path";
 var SECRET_KEY = new TextEncoder().encode(env.appSecret || "alpha-erp-local-secret-key-2026");
 var AUTH_COOKIE_NAME = "alpha_auth";
 var COOKIE_MAX_AGE = 365 * 24 * 60 * 60;
-var ADMIN_USERNAME = "admin";
-var ADMIN_PASSWORD = "admin";
+var AUTH_CONFIG_PATH = path2.resolve(process.cwd(), ".auth.json");
+var DEFAULT_USERNAME = "admin";
+var DEFAULT_PASSWORD = "admin";
+function defaultAuthConfig() {
+  return {
+    username: DEFAULT_USERNAME,
+    password: DEFAULT_PASSWORD
+  };
+}
+function readAuthConfig() {
+  if (!fs.existsSync(AUTH_CONFIG_PATH)) {
+    return defaultAuthConfig();
+  }
+  try {
+    const raw2 = fs.readFileSync(AUTH_CONFIG_PATH, "utf8");
+    const parsed = JSON.parse(raw2);
+    return {
+      username: parsed.username || DEFAULT_USERNAME,
+      password: parsed.password || DEFAULT_PASSWORD
+    };
+  } catch {
+    return defaultAuthConfig();
+  }
+}
+function writeAuthConfig(config3) {
+  fs.mkdirSync(path2.dirname(AUTH_CONFIG_PATH), { recursive: true });
+  fs.writeFileSync(AUTH_CONFIG_PATH, JSON.stringify(config3, null, 2), "utf8");
+}
 async function createLocalAuthToken(payload) {
   return new SignJWT(payload).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("1y").sign(SECRET_KEY);
 }
@@ -23052,7 +23080,20 @@ async function verifyLocalAuthToken(token) {
   }
 }
 function validateCredentials(username, password) {
-  return username === ADMIN_USERNAME && password === ADMIN_PASSWORD;
+  const config3 = readAuthConfig();
+  return username === config3.username && password === config3.password;
+}
+function changePassword(username, currentPassword, newPassword) {
+  const config3 = readAuthConfig();
+  if (username !== config3.username || currentPassword !== config3.password) {
+    throw new Error("Current password is incorrect");
+  }
+  const updated = {
+    username: config3.username,
+    password: newPassword
+  };
+  writeAuthConfig(updated);
+  return updated;
 }
 function getAuthCookie(headers) {
   const cookies = cookie.parse(headers.get("cookie") || "");
@@ -23104,6 +23145,19 @@ var authRouter = createRouter({
       }
     };
   }),
+  changePassword: authedQuery.input(
+    external_exports.object({
+      currentPassword: external_exports.string().min(1),
+      newPassword: external_exports.string().min(4)
+    })
+  ).mutation(async ({ input, ctx }) => {
+    const username = ctx.user?.name || "admin";
+    const updated = changePassword(username, input.currentPassword, input.newPassword);
+    return {
+      success: true,
+      username: updated.username
+    };
+  }),
   logout: authedQuery.mutation(async ({ ctx }) => {
     ctx.resHeaders.append("set-cookie", serializeClearCookie());
     return { success: true };
@@ -23111,26 +23165,26 @@ var authRouter = createRouter({
 });
 
 // api/json-db/engine.ts
-import fs from "fs";
-import path2 from "path";
-var DATA_DIR = path2.resolve(process.cwd(), "data");
+import fs2 from "fs";
+import path3 from "path";
+var DATA_DIR = path3.resolve(process.cwd(), "data");
 function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs2.existsSync(DATA_DIR)) {
+    fs2.mkdirSync(DATA_DIR, { recursive: true });
   }
 }
 function getFilePath(table) {
-  return path2.join(DATA_DIR, `${table}.json`);
+  return path3.join(DATA_DIR, `${table}.json`);
 }
 function readTable(table) {
   ensureDataDir();
   const filePath = getFilePath(table);
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, "[]", "utf-8");
+  if (!fs2.existsSync(filePath)) {
+    fs2.writeFileSync(filePath, "[]", "utf-8");
     return [];
   }
   try {
-    const content = fs.readFileSync(filePath, "utf-8");
+    const content = fs2.readFileSync(filePath, "utf-8");
     return JSON.parse(content);
   } catch {
     return [];
@@ -23139,7 +23193,7 @@ function readTable(table) {
 function writeTable(table, data) {
   ensureDataDir();
   const filePath = getFilePath(table);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+  fs2.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 var nextIds = {
   users: 1,

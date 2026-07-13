@@ -1,4 +1,5 @@
-import { Routes, Route } from "react-router";
+import { Routes, Route, Navigate, useLocation } from "react-router";
+import type { ReactNode } from "react";
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Transactions from "@/pages/Transactions";
@@ -8,6 +9,26 @@ import BulkUpload from "@/pages/BulkUpload";
 import Login from "@/pages/Login";
 import About from "@/pages/About";
 import NotFound from "@/pages/NotFound";
+import { useAuth } from "@/hooks/useAuth";
+
+function RequireAuth({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f0e8] text-[#1e2a4a]">
+        Checking authentication...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  return <>{children}</>;
+}
 
 export default function App() {
   return (
@@ -16,49 +37,61 @@ export default function App() {
       <Route
         path="/"
         element={
-          <Layout>
-            <Dashboard />
-          </Layout>
+          <RequireAuth>
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </RequireAuth>
         }
       />
       <Route
         path="/transactions"
         element={
-          <Layout>
-            <Transactions />
-          </Layout>
+          <RequireAuth>
+            <Layout>
+              <Transactions />
+            </Layout>
+          </RequireAuth>
         }
       />
       <Route
         path="/buyers"
         element={
-          <Layout>
-            <Buyers />
-          </Layout>
+          <RequireAuth>
+            <Layout>
+              <Buyers />
+            </Layout>
+          </RequireAuth>
         }
       />
       <Route
         path="/reports"
         element={
-          <Layout>
-            <Reports />
-          </Layout>
+          <RequireAuth>
+            <Layout>
+              <Reports />
+            </Layout>
+          </RequireAuth>
         }
       />
       <Route
         path="/bulk-upload"
         element={
-          <Layout>
-            <BulkUpload />
-          </Layout>
+          <RequireAuth>
+            <Layout>
+              <BulkUpload />
+            </Layout>
+          </RequireAuth>
         }
       />
       <Route
         path="/about"
         element={
-          <Layout>
-            <About />
-          </Layout>
+          <RequireAuth>
+            <Layout>
+              <About />
+            </Layout>
+          </RequireAuth>
         }
       />
       <Route path="*" element={<NotFound />} />

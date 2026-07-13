@@ -2458,11 +2458,11 @@
     "checkNumber": null,
     "transactionType": "Sale",
     "includeInReporting": false,
-    "deleted": false,
-    "deletedReason": null,
-    "deletedAt": null,
+    "deleted": true,
+    "deletedReason": "ff",
+    "deletedAt": "2026-07-13T12:44:26.749Z",
     "createdAt": "2026-07-13T12:12:54.294Z",
-    "updatedAt": "2026-07-13T12:12:54.294Z"
+    "updatedAt": "2026-07-13T12:44:26.749Z"
   },
   {
     "id": 146,
@@ -2475,11 +2475,11 @@
     "checkNumber": "CHQ737129",
     "transactionType": "Sale",
     "includeInReporting": true,
-    "deleted": false,
-    "deletedReason": null,
-    "deletedAt": null,
+    "deleted": true,
+    "deletedReason": "ff",
+    "deletedAt": "2026-07-13T12:44:23.599Z",
     "createdAt": "2026-07-13T12:12:54.294Z",
-    "updatedAt": "2026-07-13T12:12:54.294Z"
+    "updatedAt": "2026-07-13T12:44:23.599Z"
   },
   {
     "id": 147,
@@ -2492,28 +2492,28 @@
     "checkNumber": null,
     "transactionType": "Payment_Received",
     "includeInReporting": false,
-    "deleted": false,
-    "deletedReason": null,
-    "deletedAt": null,
+    "deleted": true,
+    "deletedReason": "ff",
+    "deletedAt": "2026-07-13T12:44:11.754Z",
     "createdAt": "2026-07-13T12:12:54.294Z",
-    "updatedAt": "2026-07-13T12:12:54.294Z"
+    "updatedAt": "2026-07-13T12:44:11.754Z"
   },
   {
     "id": 148,
     "buyerId": 6,
     "bookType": "CS",
-    "transactionDate": "2026-07-04",
+    "transactionDate": "4/7/2026",
     "dueDate": null,
     "amount": "12335.00",
     "trouserQuantity": 0,
     "checkNumber": null,
-    "transactionType": "Payment_Received",
+    "transactionType": "Sale",
     "includeInReporting": true,
-    "deleted": false,
-    "deletedReason": null,
-    "deletedAt": null,
+    "deleted": true,
+    "deletedReason": "ff",
+    "deletedAt": "2026-07-13T12:44:21.097Z",
     "createdAt": "2026-07-13T12:12:54.294Z",
-    "updatedAt": "2026-07-13T12:12:54.294Z"
+    "updatedAt": "2026-07-13T12:44:21.097Z"
   },
   {
     "id": 149,
@@ -2526,11 +2526,11 @@
     "checkNumber": null,
     "transactionType": "Payment_Received",
     "includeInReporting": true,
-    "deleted": false,
-    "deletedReason": null,
-    "deletedAt": null,
+    "deleted": true,
+    "deletedReason": "f",
+    "deletedAt": "2026-07-13T12:44:09.340Z",
     "createdAt": "2026-07-13T12:12:54.294Z",
-    "updatedAt": "2026-07-13T12:12:54.294Z"
+    "updatedAt": "2026-07-13T12:44:09.340Z"
   },
   {
     "id": 150,
@@ -2543,10 +2543,27 @@
     "checkNumber": null,
     "transactionType": "Payment_Received",
     "includeInReporting": true,
-    "deleted": false,
-    "deletedReason": null,
-    "deletedAt": null,
+    "deleted": true,
+    "deletedReason": "ff",
+    "deletedAt": "2026-07-13T12:44:05.656Z",
     "createdAt": "2026-07-13T12:12:54.294Z",
-    "updatedAt": "2026-07-13T12:12:54.294Z"
+    "updatedAt": "2026-07-13T12:44:05.656Z"
+  },
+  {
+    "buyerId": 13,
+    "bookType": "CC",
+    "transactionDate": "2026-07-13",
+    "dueDate": null,
+    "amount": "1454785787.00",
+    "trouserQuantity": 0,
+    "checkNumber": null,
+    "transactionType": "Sale",
+    "includeInReporting": true,
+    "deleted": true,
+    "deletedReason": "frgrdggf",
+    "deletedAt": "2026-07-13T12:39:14.167Z",
+    "createdAt": "2026-07-13T12:36:41.692Z",
+    "updatedAt": "2026-07-13T12:39:14.167Z",
+    "id": 151
   }
 ]
