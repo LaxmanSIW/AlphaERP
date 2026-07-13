@@ -245,7 +245,7 @@ export default function Transactions() {
 
   const formatCurrency = (amount: string | number) => {
     const val = typeof amount === "string" ? parseFloat(amount) : amount;
-    return `\u20b9 ${val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `₹ ${val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
@@ -513,7 +513,7 @@ export default function Transactions() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#1e2a4a]">Amount (\u20b9) *</Label>
+                  <Label className="text-[#1e2a4a]">Amount (₹) *</Label>
                   <Input
                     type="number"
                     value={form.amount || ""}

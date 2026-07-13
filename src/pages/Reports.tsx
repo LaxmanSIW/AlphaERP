@@ -155,7 +155,7 @@ function OutstandingReport() {
           <CardContent className="p-4">
             <p className="text-xs text-[#3d4f6f] uppercase">Total Outstanding</p>
             <p className="text-2xl font-semibold font-mono text-red-600 mt-1">
-              \u20b9 {totalOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              ₹ {totalOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
@@ -194,10 +194,10 @@ function OutstandingReport() {
                   table.filteredData?.map((item: any) => (
                     <tr key={item.buyerId} className="border-b border-[#f5f0e8] hover:bg-[#f5f0e8]/50">
                       <td className="py-3 px-4 text-sm font-medium text-[#1e2a4a]">{item.companyName}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono">\u20b9 {item.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono">\u20b9 {item.totalPaid.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono">₹ {item.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono">₹ {item.totalPaid.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                       <td className="py-3 px-4 text-sm text-right font-mono font-semibold text-red-600">
-                        \u20b9 {item.outstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        ₹ {item.outstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-3 px-4 text-sm text-right font-mono">
                         {item.daysOverdue > 0 ? <span className="text-red-600">{item.daysOverdue} days</span> : <span className="text-green-600">On time</span>}
@@ -287,17 +287,17 @@ function BuyerStatementReport() {
                 <td>${new Date(item.date).toLocaleDateString("en-IN")}</td>
                 <td>${item.description}</td>
                 <td>${item.bookType}</td>
-                <td class="num">${item.debit ? "\u20b9 " + item.debit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""}</td>
-                <td class="num">${item.credit ? "\u20b9 " + item.credit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""}</td>
-                <td class="num">\u20b9 ${item.balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                <td class="num">${item.debit ? "₹ " + item.debit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""}</td>
+                <td class="num">${item.credit ? "₹ " + item.credit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""}</td>
+                <td class="num">₹ ${item.balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
               </tr>
             `).join("")}
           </tbody>
         </table>
         <div class="summary">
-          <strong>Total Debit:</strong> \u20b9 ${totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })} |
-          <strong>Total Credit:</strong> \u20b9 ${totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })} |
-          <strong>Closing Balance:</strong> \u20b9 ${statement.closingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+          <strong>Total Debit:</strong> ₹ ${totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })} |
+          <strong>Total Credit:</strong> ₹ ${totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })} |
+          <strong>Closing Balance:</strong> ₹ ${statement.closingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
         </div>
       </body></html>`;
     printWindow.document.write(html);
@@ -363,9 +363,9 @@ function BuyerStatementReport() {
                       <td className="py-3 px-4 text-sm font-mono">{new Date(item.date).toLocaleDateString("en-IN")}</td>
                       <td className="py-3 px-4 text-sm text-[#1e2a4a]">{item.description}</td>
                       <td className="py-3 px-4 text-center"><span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700">{item.bookType}</span></td>
-                      <td className="py-3 px-4 text-sm text-right font-mono text-red-600">{item.debit ? `\u20b9 ${item.debit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono text-green-600">{item.credit ? `\u20b9 ${item.credit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold">\u20b9 {item.balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono text-red-600">{item.debit ? `₹ ${item.debit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono text-green-600">{item.credit ? `₹ ${item.credit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold">₹ {item.balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -607,19 +607,19 @@ function SalesReport() {
           <Card className="border-[#d9cfc0] bg-white"><CardContent className="p-4">
             <p className="text-xs text-[#3d4f6f] uppercase">Total Sales</p>
             <p className="text-xl font-semibold font-mono text-[#c4703f]">
-              \u20b9 {salesData.summary.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              ₹ {salesData.summary.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent></Card>
           <Card className="border-[#d9cfc0] bg-white"><CardContent className="p-4">
             <p className="text-xs text-[#3d4f6f] uppercase">Total Payments</p>
             <p className="text-xl font-semibold font-mono text-green-600">
-              \u20b9 {salesData.summary.totalPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              ₹ {salesData.summary.totalPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent></Card>
           <Card className="border-[#d9cfc0] bg-white"><CardContent className="p-4">
             <p className="text-xs text-[#3d4f6f] uppercase">Net Amount</p>
             <p className="text-xl font-semibold font-mono text-[#1e2a4a]">
-              \u20b9 {salesData.summary.netAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              ₹ {salesData.summary.netAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent></Card>
           <Card className="border-[#d9cfc0] bg-white"><CardContent className="p-4">
@@ -636,8 +636,8 @@ function SalesReport() {
             <BarChart data={salesData.items}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e8e0d4" />
               <XAxis dataKey="period" tick={{ fontSize: 11, fill: "#3d4f6f" }} />
-              <YAxis tick={{ fontSize: 11, fill: "#3d4f6f" }} tickFormatter={(v) => `\u20b9${(v / 1000).toFixed(0)}K`} />
-              <Tooltip formatter={(value: number) => [`\u20b9 ${value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, ""]} contentStyle={{ backgroundColor: "white", border: "1px solid #d9cfc0", borderRadius: "8px", fontSize: "12px" }} />
+              <YAxis tick={{ fontSize: 11, fill: "#3d4f6f" }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
+              <Tooltip formatter={(value: number) => [`₹ ${value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, ""]} contentStyle={{ backgroundColor: "white", border: "1px solid #d9cfc0", borderRadius: "8px", fontSize: "12px" }} />
               <Legend wrapperStyle={{ fontSize: "12px" }} />
               <Bar dataKey="totalSales" name="Sales" fill="#c4703f" radius={[2, 2, 0, 0]} />
               <Bar dataKey="totalPayments" name="Payments" fill="#4a9b6b" radius={[2, 2, 0, 0]} />
@@ -666,11 +666,11 @@ function SalesReport() {
                   table.filteredData?.map((item: any, i: number) => (
                     <tr key={i} className="border-b border-[#f5f0e8] hover:bg-[#f5f0e8]/50">
                       <td className="py-3 px-4 text-sm font-medium text-[#1e2a4a]">{item.period}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono">\u20b9 {item.ccSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono">\u20b9 {item.csSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold text-[#c4703f]">\u20b9 {item.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono text-green-600">\u20b9 {item.totalPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold">\u20b9 {item.netAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono">₹ {item.ccSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono">₹ {item.csSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold text-[#c4703f]">₹ {item.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono text-green-600">₹ {item.totalPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold">₹ {item.netAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                     </tr>
                   ))
                 }

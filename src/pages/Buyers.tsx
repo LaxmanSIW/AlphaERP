@@ -231,7 +231,7 @@ export default function Buyers() {
 
   const formatCurrency = (amount: string | number) => {
     const val = typeof amount === "string" ? parseFloat(amount) : amount;
-    return `\u20b9 ${val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `₹ ${val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
@@ -441,7 +441,7 @@ export default function Buyers() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[#1e2a4a]">Credit Limit (\u20b9)</Label>
+                <Label className="text-[#1e2a4a]">Credit Limit (₹)</Label>
                 <Input type="number" value={form.creditLimit || ""} onChange={(e) => setForm({ ...form, creditLimit: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="bg-[#f5f0e8] border-[#d9cfc0] text-right font-mono" />
               </div>
               <div className="flex gap-3 pt-2">
@@ -591,17 +591,17 @@ function BuyerStatementPanel({
                 <td>${new Date(item.date).toLocaleDateString("en-IN")}</td>
                 <td>${item.description}</td>
                 <td>${item.bookType}</td>
-                <td class="num">${item.debit ? "\u20b9 " + item.debit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""}</td>
-                <td class="num">${item.credit ? "\u20b9 " + item.credit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""}</td>
-                <td class="num">\u20b9 ${item.balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                <td class="num">${item.debit ? "₹ " + item.debit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""}</td>
+                <td class="num">${item.credit ? "₹ " + item.credit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""}</td>
+                <td class="num">₹ ${item.balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
               </tr>
             `).join("")}
           </tbody>
         </table>
         <div class="summary">
-          <div class="summary-item"><strong>Total Debit:</strong> \u20b9 ${totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
-          <div class="summary-item"><strong>Total Credit:</strong> \u20b9 ${totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
-          <div class="summary-item"><strong>Closing Balance:</strong> \u20b9 ${statement.closingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
+          <div class="summary-item"><strong>Total Debit:</strong> ₹ ${totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
+          <div class="summary-item"><strong>Total Credit:</strong> ₹ ${totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
+          <div class="summary-item"><strong>Closing Balance:</strong> ₹ ${statement.closingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
         </div>
       </body>
       </html>
@@ -659,19 +659,19 @@ function BuyerStatementPanel({
             <div className="px-4 py-3 border-r border-[#e8e0d4]">
               <p className="text-[10px] text-[#3d4f6f] uppercase">Total Debit</p>
               <p className="text-sm font-semibold font-mono text-red-600">
-                \u20b9 {statement.items.reduce((s: number, i: any) => s + i.debit, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                ₹ {statement.items.reduce((s: number, i: any) => s + i.debit, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </p>
             </div>
             <div className="px-4 py-3 border-r border-[#e8e0d4]">
               <p className="text-[10px] text-[#3d4f6f] uppercase">Total Credit</p>
               <p className="text-sm font-semibold font-mono text-green-600">
-                \u20b9 {statement.items.reduce((s: number, i: any) => s + i.credit, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                ₹ {statement.items.reduce((s: number, i: any) => s + i.credit, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </p>
             </div>
             <div className="px-4 py-3">
               <p className="text-[10px] text-[#3d4f6f] uppercase">Closing Balance</p>
               <p className="text-sm font-semibold font-mono text-[#1e2a4a]">
-                \u20b9 {statement.closingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                ₹ {statement.closingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
@@ -714,13 +714,13 @@ function BuyerStatementPanel({
                       </span>
                     </td>
                     <td className="py-2 px-3 text-xs text-right font-mono text-red-600">
-                      {item.debit ? `\u20b9 ${item.debit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : ""}
+                      {item.debit ? `₹ ${item.debit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : ""}
                     </td>
                     <td className="py-2 px-3 text-xs text-right font-mono text-green-600">
-                      {item.credit ? `\u20b9 ${item.credit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : ""}
+                      {item.credit ? `₹ ${item.credit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : ""}
                     </td>
                     <td className="py-2 px-3 text-xs text-right font-mono font-semibold">
-                      \u20b9 {item.balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      ₹ {item.balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}
