@@ -32,5 +32,22 @@
     "createdAt": "2026-07-13T13:00:12.579Z",
     "updatedAt": "2026-07-13T13:00:12.579Z",
     "id": 1
+  },
+  {
+    "buyerId": 1,
+    "bookType": "CC",
+    "transactionDate": "2026-07-13",
+    "dueDate": null,
+    "amount": "500.00",
+    "trouserQuantity": 0,
+    "checkNumber": null,
+    "transactionType": "Payment_Received",
+    "includeInReporting": true,
+    "deleted": false,
+    "deletedReason": null,
+    "deletedAt": null,
+    "createdAt": "2026-07-13T13:08:30.835Z",
+    "updatedAt": "2026-07-13T13:08:30.835Z",
+    "id": 2
   }
 ]

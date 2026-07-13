@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createRouter, publicQuery } from "../middleware";
 import { findAll, findMany } from "../queries/connection";
 import type { Buyer, Transaction } from "../queries/connection";
+import { summarizeAllTimeAmounts } from "../lib/dashboard-metrics";
 
 export const dashboardRouter = createRouter({
   stats: publicQuery
@@ -269,18 +270,11 @@ export const dashboardRouter = createRouter({
       }).optional()
     )
     .query(async ({ input }) => {
-      const bookFilter = input?.bookType && input.bookType !== "ALL"
-        ? (t: Transaction) => t.bookType === input.bookType
-        : () => true;
-
-      const allTxs = findAll<Transaction>("transactions").filter(
-        t => !t.deleted && t.transactionType === "Sale"
-      ).filter(bookFilter);
-
-      const totalSaleAmount = allTxs.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      const allTxs = findAll<Transaction>("transactions");
+      const summary = summarizeAllTimeAmounts(allTxs, input?.bookType as "CC" | "CS" | "ALL" | undefined);
 
       return {
-        totalSaleAmount,
+        ...summary,
         bookType: input?.bookType || "ALL",
       };
     }),

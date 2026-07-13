@@ -215,6 +215,14 @@ export default function Dashboard() {
           subtext={bookType === "ALL" ? "All books, all time" : `Alpha ${bookType}, all time`}
         />
         <KPICard
+          title="Total Payment Amount"
+          value={statsLoading ? "Loading..." : formatCurrency(allTimeSales?.totalPaymentAmount || 0)}
+          icon={Wallet}
+          iconColor="text-green-600"
+          iconBg="bg-green-100"
+          subtext={bookType === "ALL" ? "All books, all time" : `Alpha ${bookType}, all time`}
+        />
+        <KPICard
           title="Total Sales"
           value={statsLoading ? "Loading..." : formatCurrency(stats?.totalSales || 0)}
           icon={TrendingUp}
