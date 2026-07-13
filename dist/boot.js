@@ -23216,6 +23216,13 @@ function getNextId(table) {
   nextIds[table]++;
   return id;
 }
+function resetNextId(table) {
+  const rows = readTable(table);
+  const activeRows = table === "transactions" ? rows.filter((row) => !row.deleted) : rows;
+  const maxId = activeRows.reduce((max, row) => Math.max(max, row.id || 0), 0);
+  nextIds[table] = maxId + 1;
+  return nextIds[table];
+}
 function findAll(table) {
   return readTable(table);
 }
@@ -23331,6 +23338,19 @@ function seedDatabase() {
 
 // api/queries/connection.ts
 seedDatabase();
+
+// api/lib/dashboard-metrics.ts
+function summarizeAllTimeAmounts(transactions, bookType) {
+  const bookFilter = bookType && bookType !== "ALL" ? (t2) => t2.bookType === bookType : () => true;
+  const allTxs = transactions.filter((t2) => !t2.deleted).filter(bookFilter);
+  const totalSaleAmount = allTxs.filter((t2) => t2.transactionType === "Sale").reduce((sum, t2) => sum + parseFloat(t2.amount), 0);
+  const totalPaymentAmount = allTxs.filter((t2) => t2.transactionType === "Payment_Received").reduce((sum, t2) => sum + parseFloat(t2.amount), 0);
+  return {
+    totalSaleAmount,
+    totalPaymentAmount,
+    bookType: bookType || "ALL"
+  };
+}
 
 // api/routers/dashboard.ts
 var dashboardRouter = createRouter({
@@ -23510,13 +23530,10 @@ var dashboardRouter = createRouter({
       bookType: external_exports.enum(["CC", "CS", "ALL"]).optional().default("ALL")
     }).optional()
   ).query(async ({ input }) => {
-    const bookFilter = input?.bookType && input.bookType !== "ALL" ? (t2) => t2.bookType === input.bookType : () => true;
-    const allTxs = findAll("transactions").filter(
-      (t2) => !t2.deleted && t2.transactionType === "Sale"
-    ).filter(bookFilter);
-    const totalSaleAmount = allTxs.reduce((sum, t2) => sum + parseFloat(t2.amount), 0);
+    const allTxs = findAll("transactions");
+    const summary = summarizeAllTimeAmounts(allTxs, input?.bookType);
     return {
-      totalSaleAmount,
+      ...summary,
       bookType: input?.bookType || "ALL"
     };
   })
@@ -24372,6 +24389,28 @@ var auditRouter = createRouter({
   })
 });
 
+// api/routers/settings.ts
+var settingsRouter = createRouter({
+  summary: authedQuery.query(() => {
+    const buyers = findAll("buyers");
+    const transactions = findAll("transactions").filter((tx) => !tx.deleted);
+    return {
+      buyerCount: buyers.length,
+      transactionCount: transactions.length,
+      nextBuyerId: buyers.reduce((max, row) => Math.max(max, row.id || 0), 0) + 1,
+      nextTransactionId: transactions.reduce((max, row) => Math.max(max, row.id || 0), 0) + 1
+    };
+  }),
+  resetBuyerIds: authedQuery.mutation(() => {
+    const nextBuyerId = resetNextId("buyers");
+    return { success: true, nextBuyerId };
+  }),
+  resetTransactionIds: authedQuery.mutation(() => {
+    const nextTransactionId = resetNextId("transactions");
+    return { success: true, nextTransactionId };
+  })
+});
+
 // api/router.ts
 var appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -24380,7 +24419,8 @@ var appRouter = createRouter({
   transaction: transactionRouter,
   buyer: buyerRouter,
   report: reportRouter,
-  audit: auditRouter
+  audit: auditRouter,
+  settings: settingsRouter
 });
 
 // api/context.ts
