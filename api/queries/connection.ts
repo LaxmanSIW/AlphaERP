@@ -13,6 +13,7 @@ export {
   update,
   remove,
   count,
+  resetNextId,
 } from "../json-db/engine";
 
 export type { User, Buyer, Transaction, AuditLog, InsertUser, InsertBuyer, InsertTransaction, InsertAuditLog } from "../json-db/types";

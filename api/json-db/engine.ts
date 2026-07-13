@@ -71,6 +71,16 @@ function getNextId(table: TableName): number {
   return id;
 }
 
+export function resetNextId(table: TableName): number {
+  const rows = readTable<Database[TableName][number]>(table);
+  const activeRows = table === "transactions"
+    ? rows.filter((row: any) => !row.deleted)
+    : rows;
+  const maxId = activeRows.reduce((max, row: any) => Math.max(max, row.id || 0), 0);
+  nextIds[table] = maxId + 1;
+  return nextIds[table];
+}
+
 // ─── Generic CRUD Operations ─────────────────────────────
 
 export function findAll<T extends { id: number }>(table: TableName): T[] {

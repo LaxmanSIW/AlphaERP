@@ -12,6 +12,7 @@ import {
   LogOut,
   Info,
   KeyRound,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,6 +30,7 @@ const navItems = [
   { path: "/reports", label: "Reports", icon: BarChart3, shortcut: "4" },
   { path: "/bulk-upload", label: "Bulk Upload", icon: Upload, shortcut: "5" },
   { path: "/about", label: "About", icon: Info, shortcut: "6" },
+  { path: "/settings", label: "Settings", icon: Settings, shortcut: "7" },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
