@@ -26,6 +26,8 @@ export interface Buyer {
   city: string | null;
   state: string | null;
   stateCode: string | null;
+  defaultTransportId?: number | null;
+  defaultTransportName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +46,7 @@ export interface Transaction {
   checkNumber: string | null;
   transactionType: "Sale" | "Payment_Received";
   includeInReporting: boolean;
+  billId?: number | null;
   deleted: boolean;
   deletedReason: string | null;
   deletedAt: string | null;
@@ -117,6 +120,9 @@ export interface Bill {
   discountAmount: string;
   roundOff: string;
   totalAmount: string;
+  transportId?: number | null;
+  transportName?: string | null;
+  parcel?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -137,9 +143,22 @@ export interface Company {
   branchName: string;
   authorizedSignatory: string;
   terms: string[];
+  startingBillNumber?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export type InsertCompany = Omit<Company, "id" | "createdAt" | "updatedAt">;
+
+// ─── Transport ───────────────────────────────────────────
+export interface Transport {
+  id: number;
+  name: string;
+  phone: string | null;
+  vehicleNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InsertTransport = Omit<Transport, "id" | "createdAt" | "updatedAt">;
 

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/providers/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { useTableState } from "@/hooks/useTableState";
@@ -33,6 +34,8 @@ interface BuyerFormData {
   city: string;
   state: string;
   stateCode: string;
+  defaultTransportId: number | null;
+  defaultTransportName: string | null;
 }
 
 const emptyForm: BuyerFormData = {
@@ -45,6 +48,8 @@ const emptyForm: BuyerFormData = {
   city: "",
   state: "",
   stateCode: "",
+  defaultTransportId: null,
+  defaultTransportName: null,
 };
 
 function RiskBadge({ score, level }: { score: number; level: string }) {
@@ -81,6 +86,9 @@ export default function Buyers() {
   const utils = trpc.useUtils();
 
   const { data: apiData, isLoading } = trpc.buyer.list.useQuery({});
+
+  const { data: transportsData } = trpc.transport.list.useQuery();
+  const transports = transportsData?.transports || [];
 
   const { data: riskData } = trpc.buyer.riskAnalysis.useQuery({});
 
@@ -143,6 +151,8 @@ export default function Buyers() {
       city: buyer.city || "",
       state: buyer.state || "",
       stateCode: buyer.stateCode || "",
+      defaultTransportId: buyer.defaultTransportId || null,
+      defaultTransportName: buyer.defaultTransportName || null,
     });
     setModalOpen(true);
   };
@@ -299,6 +309,7 @@ export default function Buyers() {
                   <SortableHeader label="State" sortKey="state" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} />
                   <SortableHeader label="Credit Limit" sortKey="creditLimit" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
                   <SortableHeader label="Outstanding" sortKey="outstanding" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
+                  <SortableHeader label="Total Parcels" sortKey="totalParcels" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="center" className="w-24" />
                   <SortableHeader label="Risk" sortKey="riskScore" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="center" className="w-24" />
                   <th className="py-3 px-4 font-semibold text-center w-28">Actions</th>
                 </tr>
@@ -307,7 +318,7 @@ export default function Buyers() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b border-[#f5f0e8]">
-                      {Array.from({ length: 11 }).map((_, j) => (
+                      {Array.from({ length: 12 }).map((_, j) => (
                         <td key={j} className="py-3 px-4">
                           <div className="h-4 bg-[#e8e0d4] rounded animate-pulse" />
                         </td>
@@ -331,6 +342,9 @@ export default function Buyers() {
                         </td>
                         <td className="py-3 px-4 text-sm text-right font-mono font-semibold text-red-600">
                           {formatCurrency((buyer as any).outstanding || 0)}
+                        </td>
+                        <td className="py-3 px-4 text-sm font-bold text-center text-orange-700 font-mono">
+                          {buyer.totalParcels || 0}
                         </td>
                         <td className="py-3 px-4 text-center">
                           {risk ? (
@@ -366,7 +380,7 @@ export default function Buyers() {
                 )}
                 {!isLoading && table.filteredData.length === 0 && (
                   <tr>
-                    <td colSpan={11} className="py-8 text-center text-sm text-[#3d4f6f]">
+                    <td colSpan={12} className="py-8 text-center text-sm text-[#3d4f6f]">
                       {table.search ? "No matching buyers found" : "No buyers found"}
                     </td>
                   </tr>
@@ -443,6 +457,37 @@ export default function Buyers() {
               <div className="space-y-2">
                 <Label className="text-[#1e2a4a]">Credit Limit (₹)</Label>
                 <Input type="number" value={form.creditLimit || ""} onChange={(e) => setForm({ ...form, creditLimit: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="bg-[#f5f0e8] border-[#d9cfc0] text-right font-mono" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#1e2a4a]">Default Transport</Label>
+                <Select
+                  value={form.defaultTransportId ? String(form.defaultTransportId) : "NA"}
+                  onValueChange={(val) => {
+                    if (val === "NA") {
+                      setForm({ ...form, defaultTransportId: null, defaultTransportName: "NA" });
+                    } else {
+                      const tId = Number(val);
+                      const selectedTr = transports.find((t: any) => t.id === tId);
+                      setForm({
+                        ...form,
+                        defaultTransportId: tId,
+                        defaultTransportName: selectedTr ? selectedTr.name : "NA",
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-[#f5f0e8] border-[#d9cfc0] w-full text-left">
+                    <SelectValue placeholder="Select default transport" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="NA">NA (No Default Transport)</SelectItem>
+                    {transports.map((t: any) => (
+                      <SelectItem key={t.id} value={String(t.id)}>
+                        {t.name} {t.vehicleNumber ? `(${t.vehicleNumber})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex gap-3 pt-2">
                 <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending} className="flex-1 bg-[#c4703f] hover:bg-[#a85d32] text-white">

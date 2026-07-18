@@ -26,6 +26,7 @@ export default function Settings() {
   const [branch, setBranch] = useState("");
   const [signatory, setSignatory] = useState("");
   const [termsText, setTermsText] = useState("");
+  const [startingBillNumber, setStartingBillNumber] = useState("");
   const [initialized, setInitialized] = useState(false);
 
   const summaryQuery = trpc.settings.summary.useQuery(undefined, {
@@ -81,6 +82,7 @@ export default function Settings() {
       setBranch(companyData.branchName || "");
       setSignatory(companyData.authorizedSignatory || "");
       setTermsText((companyData.terms || []).join("\n"));
+      setStartingBillNumber(companyData.startingBillNumber || "0001");
       setInitialized(true);
     }
   }, [companyData, initialized]);
@@ -108,6 +110,7 @@ export default function Settings() {
       branchName: branch,
       authorizedSignatory: signatory,
       terms: termsArray,
+      startingBillNumber: startingBillNumber || "0001",
     });
   };
 
@@ -180,7 +183,7 @@ export default function Settings() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="phone">Contact Number</Label>
                   <Input
@@ -200,6 +203,17 @@ export default function Settings() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="billing@company.com"
                     required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="startingBillNumber">Starting Bill Number</Label>
+                  <Input
+                    id="startingBillNumber"
+                    value={startingBillNumber}
+                    onChange={(e) => setStartingBillNumber(e.target.value)}
+                    placeholder="e.g. 00001 or 001"
+                    required
+                    className="font-mono font-bold text-orange-700 bg-orange-50/50"
                   />
                 </div>
               </div>

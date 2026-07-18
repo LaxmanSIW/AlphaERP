@@ -72,6 +72,8 @@ interface BillFormData {
   reverseCharge: "Yes" | "No";
   items: BillItemInput[];
   roundOff: number;
+  transportId: number | null;
+  parcel: number;
 }
 
 const emptyForm = (): BillFormData => ({
@@ -82,6 +84,8 @@ const emptyForm = (): BillFormData => ({
   reverseCharge: "No",
   items: [],
   roundOff: 0,
+  transportId: null,
+  parcel: 1,
 });
 
 export default function Bills() {
@@ -106,6 +110,8 @@ export default function Bills() {
   const { data: buyersData } = trpc.buyer.list.useQuery();
   const { data: itemsData } = trpc.item.list.useQuery();
   const { data: companyData } = trpc.settings.getCompany.useQuery();
+  const { data: transportsData } = trpc.transport.list.useQuery();
+  const transports = transportsData?.transports || [];
 
   const table = useTableState({
     data: billsData?.bills || [],
@@ -205,6 +211,8 @@ export default function Bills() {
         listPrice: parseFloat(it.listPrice) || 0,
       })),
       roundOff: parseFloat(bill.roundOff) || 0,
+      transportId: bill.transportId || null,
+      parcel: bill.parcel !== undefined ? (bill.parcel ?? 1) : 1,
     });
     setViewMode("form");
   };
@@ -332,6 +340,7 @@ export default function Bills() {
       setForm((prev) => ({
         ...prev,
         placeOfSupply: selectedBuyer.state || "Uttar Pradesh",
+        transportId: selectedBuyer.defaultTransportId || prev.transportId || null,
       }));
     }
   }, [form.buyerId, selectedBuyer]);
@@ -431,6 +440,39 @@ export default function Bills() {
                         <SelectItem value="Yes">Yes</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[#1e2a4a]">Transport Partner</Label>
+                    <Select
+                      value={form.transportId ? String(form.transportId) : "NA"}
+                      onValueChange={(val) => setForm((prev) => ({ ...prev, transportId: val === "NA" ? null : parseInt(val) }))}
+                    >
+                      <SelectTrigger className="bg-white border-[#dfd5c6]">
+                        <SelectValue placeholder="Choose Transport..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="NA">NA (No Transport / Use Default)</SelectItem>
+                        {transports.map((t: any) => (
+                          <SelectItem key={t.id} value={String(t.id)}>
+                            {t.name} {t.vehicleNumber ? `(${t.vehicleNumber})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[#1e2a4a]">Parcel Quantity</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={form.parcel}
+                      onChange={(e) => setForm((prev) => ({ ...prev, parcel: parseInt(e.target.value) || 0 }))}
+                      className="bg-white border-[#dfd5c6]"
+                    />
                   </div>
                 </div>
               </Card>
@@ -859,6 +901,9 @@ export default function Bills() {
                 )}
                 <div className="flex"><span className="w-28 font-bold">Place of Supply</span><span>: {activePrintBill.placeOfSupply}</span></div>
                 <div className="flex"><span className="w-28 font-bold">Reverse Charge</span><span>: {activePrintBill.reverseCharge}</span></div>
+                {activePrintBill.transportName && activePrintBill.transportName !== "NA" && (
+                  <div className="flex"><span className="w-28 font-bold">Transport Partner</span><span>: {activePrintBill.transportName}</span></div>
+                )}
               </div>
               <div className="p-2 space-y-1.5">
                 <h4 className="font-bold border-b border-gray-300 pb-0.5">Billing & Shipping Details</h4>
@@ -878,32 +923,65 @@ export default function Bills() {
                   <tr className="bg-gray-100 border-b border-black text-[11px] font-bold">
                     <th className="py-1 px-2 border-r border-black w-8 text-center">Sr.</th>
                     <th className="py-1 px-2 border-r border-black">Item Description</th>
-                    <th className="py-1 px-2 border-r border-black w-24 text-center">HSN/SAC</th>
-                    <th className="py-1 px-2 border-r border-black w-14 text-right">Qty</th>
-                    <th className="py-1 px-2 border-r border-black w-14">Unit</th>
-                    <th className="py-1 px-2 border-r border-black w-20 text-right">List Price</th>
-                    <th className="py-1 px-2 border-r border-black w-16 text-right">Disc. %</th>
-                    <th className="py-1 px-2 border-r border-black w-14 text-right">Tax %</th>
-                    <th className="py-1 px-2 text-right w-24">Amount (₹)</th>
+                    <th className="py-1 px-2 border-r border-black w-20 text-center">HSN/SAC</th>
+                    <th className="py-1 px-2 border-r border-black w-10 text-right">Qty</th>
+                    <th className="py-1 px-2 border-r border-black w-10">Unit</th>
+                    <th className="py-1 px-2 border-r border-black w-16 text-right">List Price</th>
+                    <th className="py-1 px-2 border-r border-black w-14 text-right">Disc. %</th>
+                    <th className="py-1 px-2 border-r border-black w-16 text-right">CGST</th>
+                    <th className="py-1 px-2 border-r border-black w-16 text-right">SGST</th>
+                    <th className="py-1 px-2 border-r border-black w-16 text-right">IGST</th>
+                    <th className="py-1 px-2 text-right w-20">Amount (₹)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-300">
-                  {(activePrintBill.items || []).map((it: any, index: number) => (
-                    <tr key={index} className="text-[11px]">
-                      <td className="py-1 px-2 border-r border-black text-center font-mono">{index + 1}</td>
-                      <td className="py-1 px-2 border-r border-black font-medium">{it.name}</td>
-                      <td className="py-1 px-2 border-r border-black text-center font-mono">{it.hsnCode}</td>
-                      <td className="py-1 px-2 border-r border-black text-right font-mono">{it.qty}.00</td>
-                      <td className="py-1 px-2 border-r border-black">{it.unit}</td>
-                      <td className="py-1 px-2 border-r border-black text-right font-mono">₹{parseFloat(it.listPrice || "0").toFixed(2)}</td>
-                      <td className="py-1 px-2 border-r border-black text-right font-mono">{parseFloat(it.discountPercent || "0").toFixed(1)}%</td>
-                      <td className="py-1 px-2 border-r border-black text-right font-mono">{parseFloat(it.taxPercent || "0").toFixed(1)}%</td>
-                      <td className="py-1 px-2 text-right font-semibold font-mono">₹{parseFloat(it.amount || "0").toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    </tr>
-                  ))}
+                  {(activePrintBill.items || []).map((it: any, index: number) => {
+                    const isInterState = !(activePrintBill.placeOfSupply || "").toLowerCase().includes("uttar pradesh") && !(activePrintBill.placeOfSupply || "").includes("09");
+                    const price = parseFloat(it.listPrice || "0");
+                    const qty = parseFloat(it.qty || "0");
+                    const gross = price * qty;
+                    const discountPercent = parseFloat(it.discountPercent || "0");
+                    const discAmount = gross * (discountPercent / 100);
+                    const taxable = gross - discAmount;
+                    const taxPercent = parseFloat(it.taxPercent || "0");
+                    const taxAmount = taxable * (taxPercent / 100);
+
+                    const cgstPct = isInterState ? 0 : taxPercent / 2;
+                    const cgstAmt = isInterState ? 0 : taxAmount / 2;
+
+                    const sgstPct = isInterState ? 0 : taxPercent / 2;
+                    const sgstAmt = isInterState ? 0 : taxAmount / 2;
+
+                    const igstPct = isInterState ? taxPercent : 0;
+                    const igstAmt = isInterState ? taxAmount : 0;
+
+                    return (
+                      <tr key={index} className="text-[11px]">
+                        <td className="py-1 px-2 border-r border-black text-center font-mono">{index + 1}</td>
+                        <td className="py-1 px-2 border-r border-black font-medium">{it.name}</td>
+                        <td className="py-1 px-2 border-r border-black text-center font-mono">{it.hsnCode}</td>
+                        <td className="py-1 px-2 border-r border-black text-right font-mono">{it.qty}.00</td>
+                        <td className="py-1 px-2 border-r border-black">{it.unit}</td>
+                        <td className="py-1 px-2 border-r border-black text-right font-mono">₹{price.toFixed(2)}</td>
+                        <td className="py-1 px-2 border-r border-black text-right font-mono">{discountPercent.toFixed(1)}%</td>
+                        <td className="py-1 px-2 border-r border-black text-right font-mono">
+                          {cgstAmt > 0 ? `${cgstPct}% (₹${cgstAmt.toFixed(2)})` : "—"}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black text-right font-mono">
+                          {sgstAmt > 0 ? `${sgstPct}% (₹${sgstAmt.toFixed(2)})` : "—"}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black text-right font-mono">
+                          {igstAmt > 0 ? `${igstPct}% (₹${igstAmt.toFixed(2)})` : "—"}
+                        </td>
+                        <td className="py-1 px-2 text-right font-semibold font-mono">₹{parseFloat(it.amount || "0").toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    );
+                  })}
                   {/* Fill empty spaces to maintain structural density */}
                   {(activePrintBill.items || []).length < 5 && Array.from({ length: 5 - (activePrintBill.items || []).length }).map((_, i) => (
                     <tr key={`empty-${i}`} className="h-6 text-[11px]">
+                      <td className="py-1 px-2 border-r border-black"></td>
+                      <td className="py-1 px-2 border-r border-black"></td>
                       <td className="py-1 px-2 border-r border-black"></td>
                       <td className="py-1 px-2 border-r border-black"></td>
                       <td className="py-1 px-2 border-r border-black"></td>
@@ -974,8 +1052,24 @@ export default function Bills() {
               </div>
             </div>
 
+            {/* Parcel Details Row */}
+            <div className="border-l border-r border-b border-black p-2 flex justify-between items-center text-xs bg-[#fdfcfb]">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold uppercase tracking-wider text-[10px] text-gray-700">Parcel Qty:</span>
+                <span className="font-mono font-bold text-xs bg-orange-100/50 px-2 py-0.5 rounded text-orange-800 border border-orange-200">
+                  {activePrintBill.parcel !== undefined ? (activePrintBill.parcel ?? 1) : 1}
+                </span>
+              </div>
+              {activePrintBill.transportName && activePrintBill.transportName !== "N/A" && (
+                <div className="text-[10px] text-gray-600 font-mono">
+                  <span className="font-semibold text-black uppercase text-[9px] mr-1">Transport:</span>
+                  {activePrintBill.transportName}
+                </div>
+              )}
+            </div>
+
             {/* Terms, Settlement bank, and Signature Footer */}
-            <div className="grid grid-cols-3 border border-black text-xs">
+            <div className="grid grid-cols-3 border-l border-r border-b border-black text-xs">
               <div className="col-span-2 p-2 border-r border-black space-y-1">
                 <h4 className="font-bold border-b border-gray-200 pb-0.5 uppercase tracking-wider text-[10px]">Terms and Conditions</h4>
                 <ul className="list-none space-y-0.5 text-[10px] text-gray-600 font-serif leading-relaxed">

@@ -11,6 +11,7 @@ import About from "@/pages/About";
 import Settings from "@/pages/Settings";
 import Bills from "@/pages/Bills";
 import Items from "@/pages/Items";
+import Transports from "@/pages/Transports";
 import NotFound from "@/pages/NotFound";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -63,6 +64,16 @@ export default function App() {
           <RequireAuth>
             <Layout>
               <Items />
+            </Layout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/transports"
+        element={
+          <RequireAuth>
+            <Layout>
+              <Transports />
             </Layout>
           </RequireAuth>
         }

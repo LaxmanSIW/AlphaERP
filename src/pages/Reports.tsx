@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Calendar,
   Filter,
+  Truck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-type ReportTab = "outstanding" | "statement" | "movement" | "sales" | "items" | "gst";
+type ReportTab = "outstanding" | "statement" | "movement" | "sales" | "items" | "gst" | "transport";
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState<ReportTab>("outstanding");
@@ -37,6 +38,7 @@ export default function Reports() {
     { key: "sales" as ReportTab, label: "Sales (Monthly / Weekly)", icon: TrendingUp },
     { key: "items" as ReportTab, label: "Item Performance", icon: BarChart3 },
     { key: "gst" as ReportTab, label: "GST / Tax Summary", icon: FileText },
+    { key: "transport" as ReportTab, label: "Transport Performance", icon: Truck },
   ];
 
   return (
@@ -75,6 +77,7 @@ export default function Reports() {
       {activeTab === "sales" && <SalesReport />}
       {activeTab === "items" && <ItemPerformanceReport />}
       {activeTab === "gst" && <GstTaxSummaryReport />}
+      {activeTab === "transport" && <TransportPerformanceReport />}
     </div>
   );
 }
@@ -100,10 +103,11 @@ function OutstandingReport() {
 
   const exportCSV = () => {
     if (!data) return;
-    const headers = ["Buyer", "Book Type", "Total Sales", "Total Paid", "Outstanding", "Days Overdue", "Risk"];
+    const headers = ["Buyer", "Book Type", "Total Parcels", "Total Sales", "Total Paid", "Outstanding", "Days Overdue", "Risk"];
     const rows = table.filteredData.map((item: any) => [
       item.companyName,
       item.bookType,
+      item.totalParcels || 0,
       item.totalSales,
       item.totalPaid,
       item.outstanding,
@@ -178,6 +182,7 @@ function OutstandingReport() {
               <thead>
                 <tr className="bg-[#f5f0e8] border-b border-[#e8e0d4] text-xs text-[#3d4f6f] uppercase tracking-wider">
                   <SortableHeader label="Buyer" sortKey="companyName" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} />
+                  <SortableHeader label="Total Parcels" sortKey="totalParcels" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="center" />
                   <SortableHeader label="Sales" sortKey="totalSales" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
                   <SortableHeader label="Paid" sortKey="totalPaid" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
                   <SortableHeader label="Outstanding" sortKey="outstanding" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
@@ -189,7 +194,7 @@ function OutstandingReport() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <td key={j} className="py-3 px-4"><div className="h-4 bg-[#e8e0d4] rounded animate-pulse" /></td>
                       ))}
                     </tr>
@@ -198,6 +203,7 @@ function OutstandingReport() {
                   table.filteredData?.map((item: any) => (
                     <tr key={item.buyerId} className="border-b border-[#f5f0e8] hover:bg-[#f5f0e8]/50">
                       <td className="py-3 px-4 text-sm font-medium text-[#1e2a4a]">{item.companyName}</td>
+                      <td className="py-3 px-4 text-sm font-bold text-center text-orange-700 font-mono">{item.totalParcels || 0}</td>
                       <td className="py-3 px-4 text-sm text-right font-mono">₹ {item.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                       <td className="py-3 px-4 text-sm text-right font-mono">₹ {item.totalPaid.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                       <td className="py-3 px-4 text-sm text-right font-mono font-semibold text-red-600">
@@ -952,6 +958,132 @@ function GstTaxSummaryReport() {
                 }
                 {!isLoading && table.filteredData?.length === 0 && (
                   <tr><td colSpan={8} className="py-8 text-center text-sm text-[#3d4f6f]">No GST collection data found</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Transport Performance Report ──────────────────────────
+function TransportPerformanceReport() {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const { data, isLoading } = trpc.report.transportPerformance.useQuery({
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+
+  const table = useTableState({
+    data: (data as any[]) || [],
+    searchFields: ["name", "vehicleNumber"],
+    defaultSortKey: "totalShipments",
+    defaultSortDirection: "desc",
+  });
+
+  const totalShipments = table.filteredData?.reduce((sum: number, item: any) => sum + (item.totalShipments || 0), 0) || 0;
+  const totalValue = table.filteredData?.reduce((sum: number, item: any) => sum + (item.totalGoodsValue || 0), 0) || 0;
+  const totalParcels = table.filteredData?.reduce((sum: number, item: any) => sum + (item.totalParcels || 0), 0) || 0;
+
+  const exportCSV = () => {
+    if (!data) return;
+    const headers = ["Transport Partner", "Vehicle No", "Contact Phone", "Total Shipments Handled", "Total Parcels", "Taxable Cargo Value", "Total Cargo Value"];
+    const rows = table.filteredData.map((item: any) => [
+      item.name,
+      item.vehicleNumber,
+      item.contactPhone,
+      item.totalShipments,
+      item.totalParcels || 0,
+      item.totalTaxable,
+      item.totalGoodsValue,
+    ]);
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transport-performance-report-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="space-y-1">
+          <Label className="text-xs text-[#3d4f6f]">From Date</Label>
+          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40 bg-white border-[#d9cfc0] text-sm h-8" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-[#3d4f6f]">To Date</Label>
+          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40 bg-white border-[#d9cfc0] text-sm h-8" />
+        </div>
+        <Button variant="outline" size="sm" onClick={exportCSV} disabled={!data?.length} className="border-[#d9cfc0] text-xs ml-auto">
+          <Download className="w-3 h-3 mr-1" /> Export CSV
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="border-[#d9cfc0] bg-white">
+          <CardContent className="p-4">
+            <p className="text-xs text-[#3d4f6f] uppercase">Total Active Cargo Value</p>
+            <p className="text-xl font-bold font-mono text-green-700 mt-1">₹ {totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#d9cfc0] bg-white">
+          <CardContent className="p-4">
+            <p className="text-xs text-[#3d4f6f] uppercase">Total Shipments Handled</p>
+            <p className="text-xl font-bold font-mono text-[#c4703f] mt-1">{totalShipments}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#d9cfc0] bg-white">
+          <CardContent className="p-4">
+            <p className="text-xs text-[#3d4f6f] uppercase">Total Parcels Transported</p>
+            <p className="text-xl font-bold font-mono text-orange-700 mt-1">{totalParcels}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#d9cfc0] bg-white">
+          <CardContent className="p-4">
+            <p className="text-xs text-[#3d4f6f] uppercase">Transport Partners Evaluated</p>
+            <p className="text-xl font-bold font-mono text-[#1e2a4a] mt-1">{table.filteredData?.length || 0}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-[#d9cfc0] bg-white">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#f5f0e8] border-b border-[#e8e0d4] text-xs text-[#3d4f6f] uppercase font-semibold">
+                  <SortableHeader label="Transport Partner" sortKey="name" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} />
+                  <SortableHeader label="Vehicle Number" sortKey="vehicleNumber" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="center" />
+                  <SortableHeader label="Contact Phone" sortKey="contactPhone" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="center" />
+                  <SortableHeader label="Shipments Handled" sortKey="totalShipments" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="center" />
+                  <SortableHeader label="Total Parcels" sortKey="totalParcels" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="center" />
+                  <SortableHeader label="Taxable Cargo Value" sortKey="totalTaxable" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
+                  <SortableHeader label="Total Cargo Value" sortKey="totalGoodsValue" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? Array.from({ length: 3 }).map((_, i) => <tr key={i}>{Array.from({ length: 7 }).map((_, j) => <td key={j} className="py-3 px-4"><div className="h-4 bg-[#e8e0d4] rounded animate-pulse" /></td>)}</tr>) :
+                  table.filteredData?.map((item: any, i: number) => (
+                    <tr key={i} className="border-b border-[#f5f0e8] hover:bg-[#f5f0e8]/50">
+                      <td className="py-3 px-4 text-sm font-medium text-[#1e2a4a]">{item.name}</td>
+                      <td className="py-3 px-4 text-sm font-mono text-center">{item.vehicleNumber}</td>
+                      <td className="py-3 px-4 text-sm font-mono text-center">{item.contactPhone}</td>
+                      <td className="py-3 px-4 text-sm font-mono text-center font-semibold text-[#c4703f]">{item.totalShipments}</td>
+                      <td className="py-3 px-4 text-sm font-mono text-center font-bold text-orange-700">{item.totalParcels || 0}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono">₹ {item.totalTaxable.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold text-green-700">₹ {item.totalGoodsValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))
+                }
+                {!isLoading && table.filteredData?.length === 0 && (
+                  <tr><td colSpan={7} className="py-8 text-center text-sm text-[#3d4f6f]">No transport shipment performance metrics found</td></tr>
                 )}
               </tbody>
             </table>

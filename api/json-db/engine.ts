@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { User, Buyer, Transaction, AuditLog, Item, Bill, Company } from "./types";
+import type { User, Buyer, Transaction, AuditLog, Item, Bill, Company, Transport } from "./types";
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 
@@ -12,6 +12,7 @@ interface Database {
   items: Item[];
   bills: Bill[];
   companies: Company[];
+  transports: Transport[];
 }
 
 type TableName = keyof Database;
@@ -55,6 +56,7 @@ let nextIds: Record<TableName, number> = {
   items: 1,
   bills: 1,
   companies: 1,
+  transports: 1,
 };
 
 // Initialize next IDs from existing data

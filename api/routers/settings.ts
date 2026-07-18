@@ -45,11 +45,16 @@ export const settingsRouter = createRouter({
           "2. Interest @ 18% p.a. will be charged if the payment for Company Name is not made within the stipulated time.",
           "3. Subject to 'Delhi' Jurisdiction only."
         ],
+        startingBillNumber: "0001",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
     }
-    return companies[0];
+    const comp = companies[0];
+    if (!comp.startingBillNumber) {
+      comp.startingBillNumber = "0001";
+    }
+    return comp;
   }),
 
   updateCompany: publicQuery
@@ -66,11 +71,13 @@ export const settingsRouter = createRouter({
         branchName: z.string().min(1),
         authorizedSignatory: z.string().min(1),
         terms: z.array(z.string()),
+        startingBillNumber: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
       const result = update<Company>("companies", 1, {
         ...input,
+        startingBillNumber: input.startingBillNumber || "0001",
         updatedAt: new Date().toISOString(),
       });
       return { success: true, company: result };

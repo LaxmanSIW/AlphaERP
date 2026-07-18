@@ -34,6 +34,8 @@ export const buyerRouter = createRouter({
 
       const total = items.length;
 
+      const allBills = findAll<any>("bills") || [];
+
       // Calculate outstanding for each buyer
       const itemsWithStats = items.map(buyer => {
         const buyerTxs = allTxs.filter(t => t.buyerId === buyer.id);
@@ -44,11 +46,15 @@ export const buyerRouter = createRouter({
           .filter(t => t.transactionType === "Payment_Received")
           .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
+        const buyerBills = allBills.filter(b => b.buyerId === buyer.id);
+        const totalParcels = buyerBills.reduce((sum, b) => sum + (b.parcel !== undefined ? (b.parcel ?? 1) : 1), 0);
+
         return {
           ...buyer,
           totalSales,
           totalPaid,
           outstanding: totalSales - totalPaid,
+          totalParcels,
         };
       });
 
@@ -70,6 +76,8 @@ export const buyerRouter = createRouter({
         city: z.string().optional(),
         state: z.string().optional(),
         stateCode: z.string().optional(),
+        defaultTransportId: z.number().nullable().optional(),
+        defaultTransportName: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -84,6 +92,8 @@ export const buyerRouter = createRouter({
         city: input.city || null,
         state: input.state || null,
         stateCode: input.stateCode || null,
+        defaultTransportId: input.defaultTransportId || null,
+        defaultTransportName: input.defaultTransportName || null,
         riskScore: "5.0",
         createdAt: now,
         updatedAt: now,
@@ -105,6 +115,8 @@ export const buyerRouter = createRouter({
         city: z.string().optional(),
         state: z.string().optional(),
         stateCode: z.string().optional(),
+        defaultTransportId: z.number().nullable().optional(),
+        defaultTransportName: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -120,6 +132,8 @@ export const buyerRouter = createRouter({
       if (updateData.city !== undefined) updateValues.city = updateData.city || null;
       if (updateData.state !== undefined) updateValues.state = updateData.state || null;
       if (updateData.stateCode !== undefined) updateValues.stateCode = updateData.stateCode || null;
+      if (updateData.defaultTransportId !== undefined) updateValues.defaultTransportId = updateData.defaultTransportId;
+      if (updateData.defaultTransportName !== undefined) updateValues.defaultTransportName = updateData.defaultTransportName;
       updateValues.updatedAt = new Date().toISOString();
 
       const result = update<Buyer>("buyers", id, updateValues);

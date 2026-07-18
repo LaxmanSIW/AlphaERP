@@ -24,6 +24,7 @@ export type {
   Item,
   Bill,
   Company,
+  Transport,
   InsertUser,
   InsertBuyer,
   InsertTransaction,
@@ -31,4 +32,5 @@ export type {
   InsertItem,
   InsertBill,
   InsertCompany,
+  InsertTransport,
 } from "../json-db/types";

@@ -142,6 +142,7 @@ function Top5Card({
 export default function Dashboard() {
   const navigate = useNavigate();
   const [bookType, setBookType] = useState<"ALL" | "CC" | "CS">("ALL");
+  const [parcelView, setParcelView] = useState<"Day" | "Week" | "Month" | "Year">("Month");
 
   // Fetch dashboard data
   const { data: stats, isLoading: statsLoading } = trpc.dashboard.stats.useQuery(
@@ -160,6 +161,10 @@ export default function Dashboard() {
   );
   const { data: monthlyQuantity } = trpc.dashboard.monthlyQuantity.useQuery(
     { bookType: bookType as any },
+    { enabled: true }
+  );
+  const { data: parcelStats, isLoading: parcelStatsLoading } = trpc.dashboard.parcelStats.useQuery(
+    { view: parcelView, bookType: bookType as any },
     { enabled: true }
   );
 
@@ -205,7 +210,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <KPICard
           title="Total Sale Amount"
           value={statsLoading ? "Loading..." : formatCurrency(allTimeSales?.totalSaleAmount || 0)}
@@ -253,6 +258,14 @@ export default function Dashboard() {
           iconColor="text-blue-500"
           iconBg="bg-blue-100"
           subtext="Trousers this period"
+        />
+        <KPICard
+          title="Total Parcels Sent"
+          value={parcelStatsLoading ? "Loading..." : `${(parcelStats?.totalParcels || 0).toLocaleString("en-IN")}`}
+          icon={Package}
+          iconColor="text-orange-600"
+          iconBg="bg-orange-100"
+          subtext="From created bills"
         />
       </div>
 
@@ -340,6 +353,68 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Parcel Counts Analysis Section */}
+      <Card className="border-[#d9cfc0] bg-white">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-3">
+          <div>
+            <CardTitle className="text-base font-semibold text-[#1e2a4a]">
+              Parcel Counts Analysis
+            </CardTitle>
+            <p className="text-xs text-[#3d4f6f]">Track parcel quantities and shipments over time</p>
+          </div>
+          <div className="flex items-center gap-1.5 bg-[#e8e0d4] rounded-full p-1 self-start sm:self-auto">
+            {(["Day", "Week", "Month", "Year"] as const).map((viewOpt) => (
+              <button
+                key={viewOpt}
+                onClick={() => setParcelView(viewOpt)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  parcelView === viewOpt
+                    ? "bg-white text-[#1e2a4a] shadow-sm"
+                    : "text-[#3d4f6f] hover:text-[#1e2a4a]"
+                }`}
+              >
+                {viewOpt}
+              </button>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="flex flex-col justify-center bg-[#f5f0e8] rounded-xl p-6 text-center lg:text-left border border-[#e8e0d4]">
+              <div className="text-4xl font-extrabold font-mono text-orange-600 mb-2">
+                {parcelStatsLoading ? "..." : (parcelStats?.totalParcels || 0).toLocaleString("en-IN")}
+              </div>
+              <div className="text-sm font-semibold text-[#1e2a4a]">Total Parcels</div>
+              <div className="text-xs text-[#3d4f6f] mt-1">Aggregated across all matching invoices for the active filter.</div>
+            </div>
+            <div className="lg:col-span-3">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={parcelStats?.chartData || []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8e0d4" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#3d4f6f" }} />
+                  <YAxis tick={{ fontSize: 11, fill: "#3d4f6f" }} />
+                  <Tooltip
+                    formatter={(value: number) => [`${value} parcels`, "Parcels"]}
+                    contentStyle={{
+                      backgroundColor: "white",
+                      border: "1px solid #d9cfc0",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Bar
+                    dataKey="value"
+                    name="Parcels"
+                    fill="#f97316"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Top 5 Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

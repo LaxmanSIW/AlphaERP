@@ -6,24 +6,34 @@ import type { Bill, BillItem, Company, Buyer } from "../queries/connection";
 // Helper to auto-generate bill number
 function generateNextBillNumber(): string {
   const bills = findAll<Bill>("bills");
+  const companies = findAll<Company>("companies");
+  const company = companies[0];
+  const startingStr = company?.startingBillNumber || "0001";
+  
+  // Parse startingStr
+  const matchStart = startingStr.match(/^(\d+)/);
+  const startNum = matchStart ? parseInt(matchStart[1], 10) : 1;
+  const padLen = startingStr.length;
+
   if (bills.length === 0) {
-    return "0001/25-26";
+    return String(startNum).padStart(padLen, "0");
   }
 
-  // Get the last bill
-  // Sort by id or billNumber
+  // Get the last bill by id descending
   const sortedBills = [...bills].sort((a, b) => b.id - a.id);
   const lastBill = sortedBills[0];
-  const lastNumStr = lastBill.billNumber; // e.g. "0001/25-26"
+  const lastNumStr = lastBill.billNumber;
 
-  const match = lastNumStr.match(/^(\d+)\/(.*)$/);
-  if (match) {
-    const nextSeq = parseInt(match[1], 10) + 1;
-    const padded = String(nextSeq).padStart(4, "0");
-    return `${padded}/${match[2]}`;
+  // Extract leading digits from last bill number (ignoring any trailing / or date if it exists)
+  const matchDigits = lastNumStr.match(/^(\d+)/);
+  if (matchDigits) {
+    const lastSeq = parseInt(matchDigits[1], 10);
+    const nextSeq = Math.max(lastSeq + 1, startNum);
+    return String(nextSeq).padStart(padLen, "0");
   }
 
-  return `000${bills.length + 1}/25-26`;
+  const nextSeq = Math.max(bills.length + 1, startNum);
+  return String(nextSeq).padStart(padLen, "0");
 }
 
 export const billRouter = createRouter({
@@ -95,6 +105,8 @@ export const billRouter = createRouter({
           })
         ),
         roundOff: z.number().default(0),
+        transportId: z.number().nullable().optional(),
+        parcel: z.number().min(0).default(1),
       })
     )
     .mutation(async ({ input }) => {
@@ -103,6 +115,25 @@ export const billRouter = createRouter({
       // Retrieve buyer
       const buyer = findById<Buyer>("buyers", input.buyerId);
       if (!buyer) throw new Error("Buyer not found");
+
+      // Resolve Transport
+      let transportId = input.transportId !== undefined ? input.transportId : null;
+      let transportName = "N/A";
+      
+      if (transportId === null) {
+        // Try fallback to buyer default transport
+        if (buyer.defaultTransportId) {
+          transportId = buyer.defaultTransportId;
+          transportName = buyer.defaultTransportName || "N/A";
+        }
+      } else {
+        const tr = findById<any>("transports", transportId);
+        if (tr) {
+          transportName = tr.name;
+        } else {
+          transportId = null;
+        }
+      }
 
       // Retrieve company for tax determination
       const companies = findAll<Company>("companies");
@@ -200,6 +231,29 @@ export const billRouter = createRouter({
         discountAmount: totalDiscount.toFixed(2),
         roundOff: finalRoundOff.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
+        transportId,
+        transportName,
+        parcel: input.parcel,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Synchronize transaction
+      const totalQty = compiledItems.reduce((sum, item) => sum + item.qty, 0);
+      insert<any>("transactions", {
+        buyerId: input.buyerId,
+        bookType: "CC",
+        transactionDate: input.billDate,
+        dueDate: input.dueDate,
+        amount: totalAmount.toFixed(2),
+        trouserQuantity: totalQty,
+        checkNumber: `INV-${billNumber}`,
+        transactionType: "Sale",
+        includeInReporting: true,
+        billId: result.id,
+        deleted: false,
+        deletedReason: null,
+        deletedAt: null,
         createdAt: now,
         updatedAt: now,
       });
@@ -225,6 +279,8 @@ export const billRouter = createRouter({
           })
         ).optional(),
         roundOff: z.number().optional(),
+        transportId: z.number().nullable().optional(),
+        parcel: z.number().min(0).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -251,6 +307,27 @@ export const billRouter = createRouter({
       updateValues.dueDate = dueDate;
       updateValues.placeOfSupply = placeOfSupply;
       updateValues.reverseCharge = reverseCharge;
+
+      // Handle Transport Update
+      if (input.transportId !== undefined) {
+        if (input.transportId === null) {
+          updateValues.transportId = null;
+          updateValues.transportName = "N/A";
+        } else {
+          const tr = findById<any>("transports", input.transportId);
+          if (tr) {
+            updateValues.transportId = input.transportId;
+            updateValues.transportName = tr.name;
+          } else {
+            updateValues.transportId = null;
+            updateValues.transportName = "N/A";
+          }
+        }
+      }
+
+      if (input.parcel !== undefined) {
+        updateValues.parcel = input.parcel;
+      }
 
       if (input.items !== undefined) {
         // Retrieve company
@@ -340,6 +417,42 @@ export const billRouter = createRouter({
       const result = update<Bill>("bills", input.id, updateValues);
       if (!result) throw new Error("Bill not found");
 
+      // Synchronize associated transaction
+      const associatedTx = findOne<any>("transactions", (t) => t.billId === existingBill.id && !t.deleted);
+      const totalQty = (updateValues.items || existingBill.items).reduce((sum, item) => sum + item.qty, 0);
+      const updatedAmt = updateValues.totalAmount !== undefined ? parseFloat(updateValues.totalAmount) : parseFloat(existingBill.totalAmount);
+      
+      if (associatedTx) {
+        update<any>("transactions", associatedTx.id, {
+          buyerId,
+          transactionDate: billDate,
+          dueDate,
+          amount: updatedAmt.toFixed(2),
+          trouserQuantity: totalQty,
+          checkNumber: `INV-${existingBill.billNumber}`,
+          updatedAt: new Date().toISOString(),
+        });
+      } else {
+        // If not found, insert one
+        insert<any>("transactions", {
+          buyerId,
+          bookType: "CC",
+          transactionDate: billDate,
+          dueDate,
+          amount: updatedAmt.toFixed(2),
+          trouserQuantity: totalQty,
+          checkNumber: `INV-${existingBill.billNumber}`,
+          transactionType: "Sale",
+          includeInReporting: true,
+          billId: existingBill.id,
+          deleted: false,
+          deletedReason: null,
+          deletedAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
       return { id: input.id, bill: result, message: "Bill updated successfully" };
     }),
 
@@ -348,6 +461,17 @@ export const billRouter = createRouter({
     .mutation(async ({ input }) => {
       const success = remove<Bill>("bills", input.id);
       if (!success) throw new Error("Bill not found");
+
+      // Soft delete synchronized transaction
+      const associatedTx = findOne<any>("transactions", (t) => t.billId === input.id && !t.deleted);
+      if (associatedTx) {
+        update<any>("transactions", associatedTx.id, {
+          deleted: true,
+          deletedReason: "Bill Deleted",
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
 
       return { message: "Bill deleted successfully" };
     }),

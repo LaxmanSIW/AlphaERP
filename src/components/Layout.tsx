@@ -15,6 +15,7 @@ import {
   Settings,
   FileText,
   Tag,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -24,11 +25,12 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/providers/trpc";
-
+ 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard, shortcut: "1" },
   { path: "/bills", label: "Tax Invoices", icon: FileText, shortcut: "2" },
   { path: "/items", label: "Item Catalog", icon: Tag, shortcut: "3" },
+  { path: "/transports", label: "Transports", icon: Truck, shortcut: "0" },
   { path: "/transactions", label: "Transactions", icon: BookOpen, shortcut: "4" },
   { path: "/buyers", label: "Buyers", icon: Users, shortcut: "5" },
   { path: "/reports", label: "Reports", icon: BarChart3, shortcut: "6" },
@@ -81,10 +83,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key >= "1" && e.key <= "6") {
+      if (e.ctrlKey && e.key >= "0" && e.key <= "9") {
         e.preventDefault();
-        const idx = parseInt(e.key) - 1;
-        if (navItems[idx]) navigate(navItems[idx].path);
+        const targetItem = navItems.find((item) => item.shortcut === e.key);
+        if (targetItem) navigate(targetItem.path);
       }
       if (e.ctrlKey && e.key === "b") {
         e.preventDefault();

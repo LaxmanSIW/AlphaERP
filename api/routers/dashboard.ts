@@ -278,4 +278,118 @@ export const dashboardRouter = createRouter({
         bookType: input?.bookType || "ALL",
       };
     }),
+
+  parcelStats: publicQuery
+    .input(
+      z.object({
+        view: z.enum(["Day", "Week", "Month", "Year"]).default("Month"),
+        bookType: z.enum(["CC", "CS", "ALL"]).optional().default("ALL"),
+      })
+    )
+    .query(async ({ input }) => {
+      const { view, bookType } = input;
+      const allBills = findAll<any>("bills") || [];
+      const allTxs = findAll<any>("transactions").filter(t => !t.deleted);
+
+      let filteredBills = allBills;
+      if (bookType && bookType !== "ALL") {
+        const matchingTxIds = new Set(
+          allTxs.filter(t => t.bookType === bookType && t.billId).map(t => t.billId)
+        );
+        filteredBills = allBills.filter(b => matchingTxIds.has(b.id));
+      }
+
+      const chartMap = new Map<string, number>();
+
+      if (view === "Day") {
+        const now = new Date();
+        for (let i = 29; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+          const dateStr = d.toISOString().split("T")[0];
+          chartMap.set(dateStr, 0);
+        }
+        for (const bill of filteredBills) {
+          const bDate = bill.billDate;
+          if (chartMap.has(bDate)) {
+            chartMap.set(bDate, chartMap.get(bDate)! + (bill.parcel !== undefined ? (bill.parcel ?? 1) : 1));
+          }
+        }
+      } else if (view === "Week") {
+        const now = new Date();
+        const weekLabels: string[] = [];
+        for (let i = 11; i >= 0; i--) {
+          const d = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+          const startOfWeek = new Date(d);
+          const day = startOfWeek.getDay();
+          const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+          startOfWeek.setDate(diff);
+          const label = `Wk ${String(startOfWeek.getDate()).padStart(2, "0")}/${String(startOfWeek.getMonth() + 1).padStart(2, "0")}`;
+          chartMap.set(label, 0);
+          weekLabels.push(label);
+        }
+
+        for (const bill of filteredBills) {
+          const billTime = new Date(bill.billDate).getTime();
+          for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+            const startOfWeek = new Date(d);
+            const day = startOfWeek.getDay();
+            const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+            startOfWeek.setDate(diff);
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+            if (billTime >= startOfWeek.getTime() && billTime < endOfWeek.getTime()) {
+              const label = weekLabels[11 - i];
+              chartMap.set(label, chartMap.get(label)! + (bill.parcel !== undefined ? (bill.parcel ?? 1) : 1));
+              break;
+            }
+          }
+        }
+      } else if (view === "Month") {
+        const now = new Date();
+        for (let i = 11; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const label = d.toLocaleString("default", { month: "short" }) + " " + String(d.getFullYear()).slice(-2);
+          chartMap.set(label, 0);
+        }
+
+        for (const bill of filteredBills) {
+          const bDate = new Date(bill.billDate);
+          const label = bDate.toLocaleString("default", { month: "short" }) + " " + String(bDate.getFullYear()).slice(-2);
+          if (chartMap.has(label)) {
+            chartMap.set(label, chartMap.get(label)! + (bill.parcel !== undefined ? (bill.parcel ?? 1) : 1));
+          }
+        }
+      } else if (view === "Year") {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        for (let i = 4; i >= 0; i--) {
+          const year = currentYear - i;
+          chartMap.set(String(year), 0);
+        }
+
+        for (const bill of filteredBills) {
+          const bDate = new Date(bill.billDate);
+          const label = String(bDate.getFullYear());
+          if (chartMap.has(label)) {
+            chartMap.set(label, chartMap.get(label)! + (bill.parcel !== undefined ? (bill.parcel ?? 1) : 1));
+          }
+        }
+      }
+
+      const chartData = Array.from(chartMap.entries()).map(([label, value]) => ({
+        label,
+        value,
+      }));
+
+      const totalParcelsCount = filteredBills.reduce((sum, b) => sum + (b.parcel !== undefined ? (b.parcel ?? 1) : 1), 0);
+
+      return {
+        totalParcels: totalParcelsCount,
+        chartData,
+      };
+    }),
 });

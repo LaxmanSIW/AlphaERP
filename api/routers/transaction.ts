@@ -148,6 +148,16 @@ export const transactionRouter = createRouter({
         throw new Error("Transaction not found");
       }
 
+      // Lock rules for bill-linked transactions
+      if (oldTransaction.billId) {
+        const attemptedKeys = Object.keys(updateData).filter(
+          (k) => updateData[k as keyof typeof updateData] !== undefined && k !== "includeInReporting"
+        );
+        if (attemptedKeys.length > 0) {
+          throw new Error("This transaction is linked to a bill. Only 'Include in Reporting' can be updated directly; other fields are locked and can only be modified through the bill itself.");
+        }
+      }
+
       const updateValues: Partial<Transaction> = {};
       if (updateData.buyerId !== undefined) updateValues.buyerId = updateData.buyerId;
       if (updateData.bookType !== undefined) updateValues.bookType = updateData.bookType;
@@ -188,6 +198,11 @@ export const transactionRouter = createRouter({
       const oldTransaction = findById<Transaction>("transactions", input.id);
       if (!oldTransaction || oldTransaction.deleted) {
         throw new Error("Transaction not found");
+      }
+
+      // Check if transaction was created by a bill
+      if (oldTransaction.billId) {
+        throw new Error("This transaction was automatically created by a bill and cannot be deleted directly. It will be removed automatically if you delete or update the corresponding bill.");
       }
 
       const result = update<Transaction>("transactions", input.id, {

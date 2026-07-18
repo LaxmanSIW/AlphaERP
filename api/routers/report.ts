@@ -15,6 +15,7 @@ export const reportRouter = createRouter({
     .query(async ({ input }) => {
       const allBuyers = findAll<Buyer>("buyers");
       const allTxs = findAll<Transaction>("transactions").filter(t => !t.deleted);
+      const allBills = findAll<any>("bills") || [];
 
       const bookFilter = input?.bookType && input.bookType !== "ALL"
         ? (t: Transaction) => t.bookType === input.bookType
@@ -30,6 +31,9 @@ export const reportRouter = createRouter({
           .filter(t => t.transactionType === "Payment_Received")
           .reduce((sum, t) => sum + parseFloat(t.amount), 0);
         const outstanding = totalSales - totalPaid;
+
+        const buyerBills = allBills.filter(b => b.buyerId === buyer.id);
+        const totalParcels = buyerBills.reduce((sum, b) => sum + (b.parcel !== undefined ? (b.parcel ?? 1) : 1), 0);
 
         if (outstanding > 0 && (!input?.minAmount || outstanding >= input.minAmount)) {
           // Get latest due date
@@ -71,6 +75,7 @@ export const reportRouter = createRouter({
             totalSales,
             totalPaid,
             outstanding,
+            totalParcels,
             dueDate,
             daysOverdue,
             riskScore,
@@ -525,5 +530,64 @@ export const reportRouter = createRouter({
       });
 
       return results.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+    }),
+
+  transportPerformance: publicQuery
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional()
+    )
+    .query(async ({ input }) => {
+      const allBills = findAll<any>("bills") || [];
+      const allTransports = findAll<any>("transports") || [];
+
+      let filteredBills = allBills;
+      if (input?.startDate) {
+        filteredBills = filteredBills.filter(b => b.billDate >= input.startDate!);
+      }
+      if (input?.endDate) {
+        filteredBills = filteredBills.filter(b => b.billDate <= input.endDate!);
+      }
+
+      const results = [];
+      for (const t of allTransports) {
+        const tBills = filteredBills.filter(b => b.transportId === t.id);
+        const totalShipments = tBills.length;
+        const totalGoodsValue = tBills.reduce((sum, b) => sum + (parseFloat(b.totalAmount) || 0), 0);
+        const totalTaxable = tBills.reduce((sum, b) => sum + ((parseFloat(b.subtotal) || 0) - (parseFloat(b.discountAmount) || 0)), 0);
+        const totalParcels = tBills.reduce((sum, b) => sum + (b.parcel !== undefined ? (b.parcel ?? 1) : 1), 0);
+
+        results.push({
+          transportId: t.id,
+          name: t.name,
+          vehicleNumber: t.vehicleNumber,
+          contactPhone: t.contactPhone,
+          totalShipments,
+          totalGoodsValue,
+          totalTaxable,
+          totalParcels,
+        });
+      }
+
+      const unassignedBills = filteredBills.filter(b => !b.transportId);
+      if (unassignedBills.length > 0) {
+        const totalGoodsValue = unassignedBills.reduce((sum, b) => sum + (parseFloat(b.totalAmount) || 0), 0);
+        const totalTaxable = unassignedBills.reduce((sum, b) => sum + ((parseFloat(b.subtotal) || 0) - (parseFloat(b.discountAmount) || 0)), 0);
+        const totalParcels = unassignedBills.reduce((sum, b) => sum + (b.parcel !== undefined ? (b.parcel ?? 1) : 1), 0);
+        results.push({
+          transportId: 0,
+          name: "Direct / Buyer Pick-up",
+          vehicleNumber: "N/A",
+          contactPhone: "N/A",
+          totalShipments: unassignedBills.length,
+          totalGoodsValue,
+          totalTaxable,
+          totalParcels,
+        });
+      }
+
+      return results.sort((a, b) => b.totalShipments - a.totalShipments);
     }),
 });
