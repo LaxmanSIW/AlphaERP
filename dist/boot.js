@@ -23199,7 +23199,11 @@ var nextIds = {
   users: 1,
   buyers: 1,
   transactions: 1,
-  auditLogs: 1
+  auditLogs: 1,
+  items: 1,
+  bills: 1,
+  companies: 1,
+  transports: 1
 };
 function initNextIds() {
   Object.keys(nextIds).forEach((table) => {
@@ -23229,6 +23233,10 @@ function findAll(table) {
 function findById(table, id) {
   const rows = readTable(table);
   return rows.find((r) => r.id === id);
+}
+function findOne(table, predicate) {
+  const rows = readTable(table);
+  return rows.find(predicate);
 }
 function insert(table, data) {
   const rows = readTable(table);
@@ -23333,6 +23341,50 @@ function seedDatabase() {
   writeTable("transactions", transactionData);
   nextIds.buyers = buyerRows.length + 1;
   nextIds.transactions = transactionData.length + 1;
+  const existingCompanies = readTable("companies");
+  if (existingCompanies.length === 0) {
+    const defaultCompany = {
+      id: 1,
+      companyName: "Alpha Wholesale",
+      address: "123 Commercial Belt, Sector 4, Noida, Uttar Pradesh",
+      phone: "+91 9999999999",
+      email: "company@gmail.com",
+      gstNumber: "09AAAAA1234A1Z2",
+      bankName: "ICICI Bank",
+      accountNumber: "123456789",
+      ifscCode: "ICIC11222",
+      branchName: "Noida",
+      authorizedSignatory: "Add Name",
+      terms: [
+        "1. Goods once sold will not be taken back.",
+        "2. Interest @ 18% p.a. will be charged if the payment for Company Name is not made within the stipulated time.",
+        "3. Subject to 'Delhi' Jurisdiction only."
+      ],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
+    };
+    writeTable("companies", [defaultCompany]);
+    nextIds.companies = 2;
+  }
+  const existingItems = readTable("items");
+  if (existingItems.length === 0) {
+    const defaultItems = [
+      { id: 1, name: "Denim Trousers", hsnCode: "39231020", listPrice: "800.00", unit: "Pcs.", taxPercent: "18.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+      { id: 2, name: "Cotton Polo Shirt", hsnCode: "61051010", listPrice: "600.00", unit: "Pcs.", taxPercent: "12.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+      { id: 3, name: "Casual Summer Shorts", hsnCode: "62034200", listPrice: "450.00", unit: "Pcs.", taxPercent: "5.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+      { id: 4, name: "Formal Linen Blazer", hsnCode: "62031100", listPrice: "2500.00", unit: "Pcs.", taxPercent: "18.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+      { id: 5, name: "Silk Evening Gown", hsnCode: "62044200", listPrice: "4500.00", unit: "Pcs.", taxPercent: "18.00", createdAt: now.toISOString(), updatedAt: now.toISOString() }
+    ];
+    writeTable("items", defaultItems);
+    nextIds.items = 6;
+  }
+  const existingBills = readTable("bills");
+  if (existingBills.length > 0) {
+    const maxBillId = Math.max(...existingBills.map((b) => b.id || 0));
+    nextIds.bills = maxBillId + 1;
+  } else {
+    nextIds.bills = 1;
+  }
   console.log(`Seeded ${buyerRows.length} buyers and ${transactionData.length} transactions`);
 }
 
@@ -23453,7 +23505,7 @@ var dashboardRouter = createRouter({
     const limit = input?.limit || 5;
     const allBuyers = findAll("buyers");
     const allTxs = findAll("transactions").filter(
-      (t2) => !t2.deleted && t2.transactionType === "Sale"
+      (t2) => !t2.deleted && t2.transactionType === "Sale" && t2.includeInReporting
     );
     const volumeMap = /* @__PURE__ */ new Map();
     for (const tx of allTxs) {
@@ -23535,6 +23587,106 @@ var dashboardRouter = createRouter({
     return {
       ...summary,
       bookType: input?.bookType || "ALL"
+    };
+  }),
+  parcelStats: publicQuery.input(
+    external_exports.object({
+      view: external_exports.enum(["Day", "Week", "Month", "Year"]).default("Month"),
+      bookType: external_exports.enum(["CC", "CS", "ALL"]).optional().default("ALL")
+    })
+  ).query(async ({ input }) => {
+    const { view, bookType } = input;
+    const allBills = findAll("bills") || [];
+    const allTxs = findAll("transactions").filter((t2) => !t2.deleted);
+    let filteredBills = allBills;
+    if (bookType && bookType !== "ALL") {
+      const matchingTxIds = new Set(
+        allTxs.filter((t2) => t2.bookType === bookType && t2.billId).map((t2) => t2.billId)
+      );
+      filteredBills = allBills.filter((b) => matchingTxIds.has(b.id));
+    }
+    const chartMap = /* @__PURE__ */ new Map();
+    if (view === "Day") {
+      const now = /* @__PURE__ */ new Date();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        chartMap.set(dateStr, 0);
+      }
+      for (const bill of filteredBills) {
+        const bDate = bill.billDate;
+        if (chartMap.has(bDate)) {
+          chartMap.set(bDate, chartMap.get(bDate) + (bill.parcel !== void 0 ? bill.parcel ?? 1 : 1));
+        }
+      }
+    } else if (view === "Week") {
+      const now = /* @__PURE__ */ new Date();
+      const weekLabels = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1e3);
+        const startOfWeek = new Date(d);
+        const day2 = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day2 + (day2 === 0 ? -6 : 1);
+        startOfWeek.setDate(diff);
+        const label = `Wk ${String(startOfWeek.getDate()).padStart(2, "0")}/${String(startOfWeek.getMonth() + 1).padStart(2, "0")}`;
+        chartMap.set(label, 0);
+        weekLabels.push(label);
+      }
+      for (const bill of filteredBills) {
+        const billTime = new Date(bill.billDate).getTime();
+        for (let i = 11; i >= 0; i--) {
+          const d = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1e3);
+          const startOfWeek = new Date(d);
+          const day2 = startOfWeek.getDay();
+          const diff = startOfWeek.getDate() - day2 + (day2 === 0 ? -6 : 1);
+          startOfWeek.setDate(diff);
+          startOfWeek.setHours(0, 0, 0, 0);
+          const endOfWeek = new Date(startOfWeek);
+          endOfWeek.setDate(startOfWeek.getDate() + 7);
+          if (billTime >= startOfWeek.getTime() && billTime < endOfWeek.getTime()) {
+            const label = weekLabels[11 - i];
+            chartMap.set(label, chartMap.get(label) + (bill.parcel !== void 0 ? bill.parcel ?? 1 : 1));
+            break;
+          }
+        }
+      }
+    } else if (view === "Month") {
+      const now = /* @__PURE__ */ new Date();
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const label = d.toLocaleString("default", { month: "short" }) + " " + String(d.getFullYear()).slice(-2);
+        chartMap.set(label, 0);
+      }
+      for (const bill of filteredBills) {
+        const bDate = new Date(bill.billDate);
+        const label = bDate.toLocaleString("default", { month: "short" }) + " " + String(bDate.getFullYear()).slice(-2);
+        if (chartMap.has(label)) {
+          chartMap.set(label, chartMap.get(label) + (bill.parcel !== void 0 ? bill.parcel ?? 1 : 1));
+        }
+      }
+    } else if (view === "Year") {
+      const now = /* @__PURE__ */ new Date();
+      const currentYear = now.getFullYear();
+      for (let i = 4; i >= 0; i--) {
+        const year2 = currentYear - i;
+        chartMap.set(String(year2), 0);
+      }
+      for (const bill of filteredBills) {
+        const bDate = new Date(bill.billDate);
+        const label = String(bDate.getFullYear());
+        if (chartMap.has(label)) {
+          chartMap.set(label, chartMap.get(label) + (bill.parcel !== void 0 ? bill.parcel ?? 1 : 1));
+        }
+      }
+    }
+    const chartData = Array.from(chartMap.entries()).map(([label, value]) => ({
+      label,
+      value
+    }));
+    const totalParcelsCount = filteredBills.reduce((sum, b) => sum + (b.parcel !== void 0 ? b.parcel ?? 1 : 1), 0);
+    return {
+      totalParcels: totalParcelsCount,
+      chartData
     };
   })
 });
@@ -23664,6 +23816,14 @@ var transactionRouter = createRouter({
     if (!oldTransaction || oldTransaction.deleted) {
       throw new Error("Transaction not found");
     }
+    if (oldTransaction.billId) {
+      const attemptedKeys = Object.keys(updateData).filter(
+        (k) => updateData[k] !== void 0 && k !== "includeInReporting"
+      );
+      if (attemptedKeys.length > 0) {
+        throw new Error("This transaction is linked to a bill. Only 'Include in Reporting' can be updated directly; other fields are locked and can only be modified through the bill itself.");
+      }
+    }
     const updateValues = {};
     if (updateData.buyerId !== void 0) updateValues.buyerId = updateData.buyerId;
     if (updateData.bookType !== void 0) updateValues.bookType = updateData.bookType;
@@ -23697,6 +23857,9 @@ var transactionRouter = createRouter({
     const oldTransaction = findById("transactions", input.id);
     if (!oldTransaction || oldTransaction.deleted) {
       throw new Error("Transaction not found");
+    }
+    if (oldTransaction.billId) {
+      throw new Error("This transaction was automatically created by a bill and cannot be deleted directly. It will be removed automatically if you delete or update the corresponding bill.");
     }
     const result = update("transactions", input.id, {
       deleted: true,
@@ -23848,15 +24011,19 @@ var buyerRouter = createRouter({
       return a.companyName.localeCompare(b.companyName);
     });
     const total = items.length;
+    const allBills = findAll("bills") || [];
     const itemsWithStats = items.map((buyer) => {
       const buyerTxs = allTxs.filter((t2) => t2.buyerId === buyer.id);
       const totalSales = buyerTxs.filter((t2) => t2.transactionType === "Sale").reduce((sum, t2) => sum + parseFloat(t2.amount), 0);
       const totalPaid = buyerTxs.filter((t2) => t2.transactionType === "Payment_Received").reduce((sum, t2) => sum + parseFloat(t2.amount), 0);
+      const buyerBills = allBills.filter((b) => b.buyerId === buyer.id);
+      const totalParcels = buyerBills.reduce((sum, b) => sum + (b.parcel !== void 0 ? b.parcel ?? 1 : 1), 0);
       return {
         ...buyer,
         totalSales,
         totalPaid,
-        outstanding: totalSales - totalPaid
+        outstanding: totalSales - totalPaid,
+        totalParcels
       };
     });
     return {
@@ -23874,7 +24041,9 @@ var buyerRouter = createRouter({
       address: external_exports.string().optional(),
       city: external_exports.string().optional(),
       state: external_exports.string().optional(),
-      stateCode: external_exports.string().optional()
+      stateCode: external_exports.string().optional(),
+      defaultTransportId: external_exports.number().nullable().optional(),
+      defaultTransportName: external_exports.string().nullable().optional()
     })
   ).mutation(async ({ input }) => {
     const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -23888,6 +24057,8 @@ var buyerRouter = createRouter({
       city: input.city || null,
       state: input.state || null,
       stateCode: input.stateCode || null,
+      defaultTransportId: input.defaultTransportId || null,
+      defaultTransportName: input.defaultTransportName || null,
       riskScore: "5.0",
       createdAt: now,
       updatedAt: now
@@ -23905,7 +24076,9 @@ var buyerRouter = createRouter({
       address: external_exports.string().optional(),
       city: external_exports.string().optional(),
       state: external_exports.string().optional(),
-      stateCode: external_exports.string().optional()
+      stateCode: external_exports.string().optional(),
+      defaultTransportId: external_exports.number().nullable().optional(),
+      defaultTransportName: external_exports.string().nullable().optional()
     })
   ).mutation(async ({ input }) => {
     const { id, ...updateData } = input;
@@ -23919,6 +24092,8 @@ var buyerRouter = createRouter({
     if (updateData.city !== void 0) updateValues.city = updateData.city || null;
     if (updateData.state !== void 0) updateValues.state = updateData.state || null;
     if (updateData.stateCode !== void 0) updateValues.stateCode = updateData.stateCode || null;
+    if (updateData.defaultTransportId !== void 0) updateValues.defaultTransportId = updateData.defaultTransportId;
+    if (updateData.defaultTransportName !== void 0) updateValues.defaultTransportName = updateData.defaultTransportName;
     updateValues.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     const result = update("buyers", id, updateValues);
     if (!result) throw new Error("Buyer not found");
@@ -24090,6 +24265,7 @@ var reportRouter = createRouter({
   ).query(async ({ input }) => {
     const allBuyers = findAll("buyers");
     const allTxs = findAll("transactions").filter((t2) => !t2.deleted);
+    const allBills = findAll("bills") || [];
     const bookFilter = input?.bookType && input.bookType !== "ALL" ? (t2) => t2.bookType === input.bookType : () => true;
     const results = [];
     for (const buyer of allBuyers) {
@@ -24097,6 +24273,8 @@ var reportRouter = createRouter({
       const totalSales = buyerTxs.filter((t2) => t2.transactionType === "Sale").reduce((sum, t2) => sum + parseFloat(t2.amount), 0);
       const totalPaid = buyerTxs.filter((t2) => t2.transactionType === "Payment_Received").reduce((sum, t2) => sum + parseFloat(t2.amount), 0);
       const outstanding = totalSales - totalPaid;
+      const buyerBills = allBills.filter((b) => b.buyerId === buyer.id);
+      const totalParcels = buyerBills.reduce((sum, b) => sum + (b.parcel !== void 0 ? b.parcel ?? 1 : 1), 0);
       if (outstanding > 0 && (!input?.minAmount || outstanding >= input.minAmount)) {
         const saleTxs = buyerTxs.filter((t2) => t2.transactionType === "Sale").sort((a, b) => b.transactionDate.localeCompare(a.transactionDate));
         const latestTx = saleTxs[0];
@@ -24126,6 +24304,7 @@ var reportRouter = createRouter({
           totalSales,
           totalPaid,
           outstanding,
+          totalParcels,
           dueDate,
           daysOverdue,
           riskScore,
@@ -24185,7 +24364,7 @@ var reportRouter = createRouter({
     const allBuyers = findAll("buyers");
     const bookFilter = input.bookType !== "ALL" ? (t2) => t2.bookType === input.bookType : () => true;
     let txItems = findAll("transactions").filter(
-      (t2) => !t2.deleted && t2.transactionType === "Sale" && t2.transactionDate >= input.startDate && t2.transactionDate <= input.endDate
+      (t2) => !t2.deleted && t2.transactionType === "Sale" && t2.includeInReporting && t2.transactionDate >= input.startDate && t2.transactionDate <= input.endDate
     ).filter(bookFilter);
     if (input.groupBy === "Buyer") {
       const buyerMap = /* @__PURE__ */ new Map();
@@ -24354,6 +24533,269 @@ var reportRouter = createRouter({
         periodCount: items.length
       }
     };
+  }),
+  itemPerformance: publicQuery.input(
+    external_exports.object({
+      startDate: external_exports.string().optional(),
+      endDate: external_exports.string().optional()
+    }).optional()
+  ).query(async ({ input }) => {
+    const allBills = findAll("bills") || [];
+    const allItems = findAll("items") || [];
+    let filteredBills = allBills;
+    if (input?.startDate) {
+      filteredBills = filteredBills.filter((b) => b.billDate >= input.startDate);
+    }
+    if (input?.endDate) {
+      filteredBills = filteredBills.filter((b) => b.billDate <= input.endDate);
+    }
+    const perfMap = /* @__PURE__ */ new Map();
+    for (const item of allItems) {
+      perfMap.set(item.id, {
+        itemId: item.id,
+        name: item.name,
+        hsnCode: item.hsnCode,
+        totalQty: 0,
+        totalSales: 0,
+        totalDiscount: 0,
+        totalTax: 0,
+        totalRevenue: 0
+      });
+    }
+    for (const bill of filteredBills) {
+      for (const line of bill.items || []) {
+        let entry = perfMap.get(line.itemId);
+        if (!entry) {
+          entry = {
+            itemId: line.itemId,
+            name: line.name || "Unknown Item",
+            hsnCode: line.hsnCode || "N/A",
+            totalQty: 0,
+            totalSales: 0,
+            totalDiscount: 0,
+            totalTax: 0,
+            totalRevenue: 0
+          };
+          perfMap.set(line.itemId, entry);
+        }
+        const qty = line.qty || 0;
+        const listPrice = parseFloat(line.listPrice) || 0;
+        const gross = listPrice * qty;
+        const discPercent = parseFloat(line.discountPercent) || 0;
+        const discAmt = gross * (discPercent / 100);
+        const taxable = gross - discAmt;
+        const taxPercent = parseFloat(line.taxPercent) || 0;
+        const taxAmt = taxable * (taxPercent / 100);
+        const finalAmt = parseFloat(line.amount) || taxable + taxAmt;
+        entry.totalQty += qty;
+        entry.totalSales += gross;
+        entry.totalDiscount += discAmt;
+        entry.totalTax += taxAmt;
+        entry.totalRevenue += finalAmt;
+      }
+    }
+    const results = Array.from(perfMap.values()).map((r) => ({
+      ...r,
+      totalSales: Math.round(r.totalSales * 100) / 100,
+      totalDiscount: Math.round(r.totalDiscount * 100) / 100,
+      totalTax: Math.round(r.totalTax * 100) / 100,
+      totalRevenue: Math.round(r.totalRevenue * 100) / 100
+    }));
+    return results.sort((a, b) => b.totalQty - a.totalQty);
+  }),
+  gstTaxReport: publicQuery.input(
+    external_exports.object({
+      startDate: external_exports.string().optional(),
+      endDate: external_exports.string().optional()
+    }).optional()
+  ).query(async ({ input }) => {
+    const allBills = findAll("bills") || [];
+    let filteredBills = allBills;
+    if (input?.startDate) {
+      filteredBills = filteredBills.filter((b) => b.billDate >= input.startDate);
+    }
+    if (input?.endDate) {
+      filteredBills = filteredBills.filter((b) => b.billDate <= input.endDate);
+    }
+    const grouped = /* @__PURE__ */ new Map();
+    for (const bill of filteredBills) {
+      const dateObj = new Date(bill.billDate);
+      if (isNaN(dateObj.getTime())) continue;
+      const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}`;
+      const existing = grouped.get(monthKey) || {
+        month: monthKey,
+        billCount: 0,
+        taxableAmount: 0,
+        cgst: 0,
+        sgst: 0,
+        igst: 0,
+        totalTax: 0,
+        totalAmount: 0
+      };
+      const subtotal = parseFloat(bill.subtotal) || 0;
+      const discount = parseFloat(bill.discountAmount) || 0;
+      const taxable = subtotal - discount;
+      const cgst = parseFloat(bill.cgstAmount) || 0;
+      const sgst = parseFloat(bill.sgstAmount) || 0;
+      const igst = parseFloat(bill.igstAmount) || 0;
+      const tax = parseFloat(bill.totalTax) || 0;
+      const total = parseFloat(bill.totalAmount) || 0;
+      existing.billCount += 1;
+      existing.taxableAmount += taxable;
+      existing.cgst += cgst;
+      existing.sgst += sgst;
+      existing.igst += igst;
+      existing.totalTax += tax;
+      existing.totalAmount += total;
+      grouped.set(monthKey, existing);
+    }
+    const results = Array.from(grouped.values()).map((r) => {
+      const [year2, month] = r.month.split("-");
+      const d = new Date(parseInt(year2), parseInt(month) - 1);
+      const monthName = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      return {
+        monthKey: r.month,
+        period: monthName,
+        billCount: r.billCount,
+        taxableAmount: Math.round(r.taxableAmount * 100) / 100,
+        cgst: Math.round(r.cgst * 100) / 100,
+        sgst: Math.round(r.sgst * 100) / 100,
+        igst: Math.round(r.igst * 100) / 100,
+        totalTax: Math.round(r.totalTax * 100) / 100,
+        totalAmount: Math.round(r.totalAmount * 100) / 100
+      };
+    });
+    return results.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }),
+  transportPerformance: publicQuery.input(
+    external_exports.object({
+      startDate: external_exports.string().optional(),
+      endDate: external_exports.string().optional()
+    }).optional()
+  ).query(async ({ input }) => {
+    const allBills = findAll("bills") || [];
+    const allTransports = findAll("transports") || [];
+    let filteredBills = allBills;
+    if (input?.startDate) {
+      filteredBills = filteredBills.filter((b) => b.billDate >= input.startDate);
+    }
+    if (input?.endDate) {
+      filteredBills = filteredBills.filter((b) => b.billDate <= input.endDate);
+    }
+    const results = [];
+    for (const t2 of allTransports) {
+      const tBills = filteredBills.filter((b) => b.transportId === t2.id);
+      const totalShipments = tBills.length;
+      const totalGoodsValue = tBills.reduce((sum, b) => sum + (parseFloat(b.totalAmount) || 0), 0);
+      const totalTaxable = tBills.reduce((sum, b) => sum + ((parseFloat(b.subtotal) || 0) - (parseFloat(b.discountAmount) || 0)), 0);
+      const totalParcels = tBills.reduce((sum, b) => sum + (b.parcel !== void 0 ? b.parcel ?? 1 : 1), 0);
+      results.push({
+        transportId: t2.id,
+        name: t2.name,
+        vehicleNumber: t2.vehicleNumber,
+        contactPhone: t2.contactPhone,
+        totalShipments,
+        totalGoodsValue,
+        totalTaxable,
+        totalParcels
+      });
+    }
+    const unassignedBills = filteredBills.filter((b) => !b.transportId);
+    if (unassignedBills.length > 0) {
+      const totalGoodsValue = unassignedBills.reduce((sum, b) => sum + (parseFloat(b.totalAmount) || 0), 0);
+      const totalTaxable = unassignedBills.reduce((sum, b) => sum + ((parseFloat(b.subtotal) || 0) - (parseFloat(b.discountAmount) || 0)), 0);
+      const totalParcels = unassignedBills.reduce((sum, b) => sum + (b.parcel !== void 0 ? b.parcel ?? 1 : 1), 0);
+      results.push({
+        transportId: 0,
+        name: "Direct / Buyer Pick-up",
+        vehicleNumber: "N/A",
+        contactPhone: "N/A",
+        totalShipments: unassignedBills.length,
+        totalGoodsValue,
+        totalTaxable,
+        totalParcels
+      });
+    }
+    return results.sort((a, b) => b.totalShipments - a.totalShipments);
+  }),
+  itemMovement: publicQuery.input(
+    external_exports.object({
+      startDate: external_exports.string().optional(),
+      endDate: external_exports.string().optional()
+    }).optional()
+  ).query(async ({ input }) => {
+    const allBills = findAll("bills") || [];
+    const allTxs = findAll("transactions") || [];
+    let filteredBills = allBills;
+    if (input?.startDate) {
+      filteredBills = filteredBills.filter((b) => b.billDate >= input.startDate);
+    }
+    if (input?.endDate) {
+      filteredBills = filteredBills.filter((b) => b.billDate <= input.endDate);
+    }
+    let csTxs = allTxs.filter((t2) => !t2.deleted && t2.transactionType === "Sale" && t2.bookType === "CS" && t2.includeInReporting);
+    if (input?.startDate) {
+      csTxs = csTxs.filter((t2) => t2.transactionDate >= input.startDate);
+    }
+    if (input?.endDate) {
+      csTxs = csTxs.filter((t2) => t2.transactionDate <= input.endDate);
+    }
+    const movementMap = /* @__PURE__ */ new Map();
+    let csQty = 0;
+    let csRevenue = 0;
+    for (const tx of csTxs) {
+      csQty += tx.trouserQuantity || 0;
+      csRevenue += parseFloat(tx.amount) || 0;
+    }
+    movementMap.set("CS-Trousers", {
+      name: "CS-Trousers",
+      hsnCode: "62034200",
+      totalQty: csQty,
+      totalSales: csRevenue,
+      totalDiscount: 0,
+      totalTax: 0,
+      totalRevenue: csRevenue
+    });
+    for (const bill of filteredBills) {
+      for (const line of bill.items || []) {
+        const itemName = line.name || `Item ${line.itemId}`;
+        let entry = movementMap.get(itemName);
+        if (!entry) {
+          entry = {
+            name: itemName,
+            hsnCode: line.hsnCode || "N/A",
+            totalQty: 0,
+            totalSales: 0,
+            totalDiscount: 0,
+            totalTax: 0,
+            totalRevenue: 0
+          };
+          movementMap.set(itemName, entry);
+        }
+        const qty = line.qty || 0;
+        const listPrice = parseFloat(line.listPrice) || 0;
+        const gross = listPrice * qty;
+        const discPercent = parseFloat(line.discountPercent) || 0;
+        const discAmt = gross * (discPercent / 100);
+        const taxable = gross - discAmt;
+        const taxPercent = parseFloat(line.taxPercent) || 0;
+        const taxAmt = taxable * (taxPercent / 100);
+        const finalAmt = parseFloat(line.amount) || taxable + taxAmt;
+        entry.totalQty += qty;
+        entry.totalSales += gross;
+        entry.totalDiscount += discAmt;
+        entry.totalTax += taxAmt;
+        entry.totalRevenue += finalAmt;
+      }
+    }
+    const results = Array.from(movementMap.values()).map((r) => ({
+      ...r,
+      totalSales: Math.round(r.totalSales * 100) / 100,
+      totalDiscount: Math.round(r.totalDiscount * 100) / 100,
+      totalTax: Math.round(r.totalTax * 100) / 100,
+      totalRevenue: Math.round(r.totalRevenue * 100) / 100
+    }));
+    return results.sort((a, b) => b.totalQty - a.totalQty);
   })
 });
 
@@ -24408,6 +24850,623 @@ var settingsRouter = createRouter({
   resetTransactionIds: authedQuery.mutation(() => {
     const nextTransactionId = resetNextId("transactions");
     return { success: true, nextTransactionId };
+  }),
+  getCompany: publicQuery.query(() => {
+    const companies = findAll("companies");
+    if (companies.length === 0) {
+      return {
+        id: 1,
+        companyName: "Alpha Wholesale",
+        address: "123 Commercial Belt, Sector 4, Noida, Uttar Pradesh",
+        phone: "+91 9999999999",
+        email: "company@gmail.com",
+        gstNumber: "09AAAAA1234A1Z2",
+        bankName: "ICICI Bank",
+        accountNumber: "123456789",
+        ifscCode: "ICIC11222",
+        branchName: "Noida",
+        authorizedSignatory: "Add Name",
+        terms: [
+          "1. Goods once sold will not be taken back.",
+          "2. Interest @ 18% p.a. will be charged if the payment for Company Name is not made within the stipulated time.",
+          "3. Subject to 'Delhi' Jurisdiction only."
+        ],
+        startingBillNumber: "0001",
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+    const comp = companies[0];
+    if (!comp.startingBillNumber) {
+      comp.startingBillNumber = "0001";
+    }
+    return comp;
+  }),
+  updateCompany: publicQuery.input(
+    external_exports.object({
+      companyName: external_exports.string().min(1),
+      address: external_exports.string().min(1),
+      phone: external_exports.string().min(1),
+      email: external_exports.string().email(),
+      gstNumber: external_exports.string().min(1),
+      bankName: external_exports.string().min(1),
+      accountNumber: external_exports.string().min(1),
+      ifscCode: external_exports.string().min(1),
+      branchName: external_exports.string().min(1),
+      authorizedSignatory: external_exports.string().min(1),
+      terms: external_exports.array(external_exports.string()),
+      startingBillNumber: external_exports.string().nullable().optional()
+    })
+  ).mutation(async ({ input }) => {
+    const result = update("companies", 1, {
+      ...input,
+      startingBillNumber: input.startingBillNumber || "0001",
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    return { success: true, company: result };
+  })
+});
+
+// api/routers/item.ts
+var itemRouter = createRouter({
+  list: publicQuery.input(
+    external_exports.object({
+      search: external_exports.string().optional(),
+      sortBy: external_exports.string().optional(),
+      sortOrder: external_exports.enum(["asc", "desc"]).default("asc")
+    }).optional()
+  ).query(async ({ input }) => {
+    let items = findAll("items");
+    if (input?.search) {
+      const searchLower = input.search.toLowerCase();
+      items = items.filter(
+        (item) => item.name.toLowerCase().includes(searchLower) || item.hsnCode.toLowerCase().includes(searchLower)
+      );
+    }
+    if (input?.sortBy) {
+      const key = input.sortBy;
+      items.sort((a, b) => {
+        const valA = String(a[key] || "");
+        const valB = String(b[key] || "");
+        if (input.sortOrder === "desc") {
+          return valB.localeCompare(valA, void 0, { numeric: true });
+        }
+        return valA.localeCompare(valB, void 0, { numeric: true });
+      });
+    } else {
+      items.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return {
+      items,
+      total: items.length
+    };
+  }),
+  create: publicQuery.input(
+    external_exports.object({
+      name: external_exports.string().min(1),
+      hsnCode: external_exports.string().min(1),
+      listPrice: external_exports.number().min(0),
+      unit: external_exports.string().min(1),
+      taxPercent: external_exports.number().min(0).max(100)
+    })
+  ).mutation(async ({ input }) => {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const result = insert("items", {
+      name: input.name,
+      hsnCode: input.hsnCode,
+      listPrice: input.listPrice.toFixed(2),
+      unit: input.unit,
+      taxPercent: input.taxPercent.toFixed(2),
+      createdAt: now,
+      updatedAt: now
+    });
+    return { id: result.id, item: result, message: "Item created successfully" };
+  }),
+  update: publicQuery.input(
+    external_exports.object({
+      id: external_exports.number(),
+      name: external_exports.string().optional(),
+      hsnCode: external_exports.string().optional(),
+      listPrice: external_exports.number().optional(),
+      unit: external_exports.string().optional(),
+      taxPercent: external_exports.number().optional()
+    })
+  ).mutation(async ({ input }) => {
+    const { id, ...updateData } = input;
+    const updateValues = {};
+    if (updateData.name !== void 0) updateValues.name = updateData.name;
+    if (updateData.hsnCode !== void 0) updateValues.hsnCode = updateData.hsnCode;
+    if (updateData.listPrice !== void 0) updateValues.listPrice = updateData.listPrice.toFixed(2);
+    if (updateData.unit !== void 0) updateValues.unit = updateData.unit;
+    if (updateData.taxPercent !== void 0) updateValues.taxPercent = updateData.taxPercent.toFixed(2);
+    updateValues.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const result = update("items", id, updateValues);
+    if (!result) throw new Error("Item not found");
+    return { id, item: result, message: "Item updated successfully" };
+  }),
+  delete: publicQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
+    const success2 = remove("items", input.id);
+    if (!success2) throw new Error("Item not found");
+    return { message: "Item deleted successfully" };
+  }),
+  detail: publicQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
+    const item = findById("items", input.id);
+    if (!item) throw new Error("Item not found");
+    return item;
+  })
+});
+
+// api/routers/bill.ts
+function generateNextBillNumber() {
+  const bills = findAll("bills");
+  const companies = findAll("companies");
+  const company = companies[0];
+  const startingStr = company?.startingBillNumber || "0001";
+  const matchStart = startingStr.match(/^(\d+)/);
+  const startNum = matchStart ? parseInt(matchStart[1], 10) : 1;
+  const padLen = startingStr.length;
+  if (bills.length === 0) {
+    return String(startNum).padStart(padLen, "0");
+  }
+  const sortedBills = [...bills].sort((a, b) => b.id - a.id);
+  const lastBill = sortedBills[0];
+  const lastNumStr = lastBill.billNumber;
+  const matchDigits = lastNumStr.match(/^(\d+)/);
+  if (matchDigits) {
+    const lastSeq = parseInt(matchDigits[1], 10);
+    const nextSeq2 = Math.max(lastSeq + 1, startNum);
+    return String(nextSeq2).padStart(padLen, "0");
+  }
+  const nextSeq = Math.max(bills.length + 1, startNum);
+  return String(nextSeq).padStart(padLen, "0");
+}
+var billRouter = createRouter({
+  list: publicQuery.input(
+    external_exports.object({
+      search: external_exports.string().optional(),
+      sortBy: external_exports.string().optional(),
+      sortOrder: external_exports.enum(["asc", "desc"]).default("desc")
+    }).optional()
+  ).query(async ({ input }) => {
+    let bills = findAll("bills");
+    if (input?.search) {
+      const searchLower = input.search.toLowerCase();
+      bills = bills.filter(
+        (b) => b.billNumber.toLowerCase().includes(searchLower) || b.buyerName.toLowerCase().includes(searchLower) || b.buyerGst && b.buyerGst.toLowerCase().includes(searchLower)
+      );
+    }
+    if (input?.sortBy) {
+      const key = input.sortBy;
+      bills.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+        if (key === "totalAmount" || key === "subtotal" || key === "id") {
+          const numA = parseFloat(String(valA || 0));
+          const numB = parseFloat(String(valB || 0));
+          return input.sortOrder === "desc" ? numB - numA : numA - numB;
+        }
+        const strA = String(valA || "");
+        const strB = String(valB || "");
+        if (input.sortOrder === "desc") {
+          return strB.localeCompare(strA, void 0, { numeric: true });
+        }
+        return strA.localeCompare(strB, void 0, { numeric: true });
+      });
+    } else {
+      bills.sort((a, b) => b.id - a.id);
+    }
+    return {
+      bills,
+      total: bills.length
+    };
+  }),
+  create: publicQuery.input(
+    external_exports.object({
+      buyerId: external_exports.number(),
+      billDate: external_exports.string(),
+      dueDate: external_exports.string().nullable(),
+      placeOfSupply: external_exports.string(),
+      reverseCharge: external_exports.enum(["Yes", "No"]).default("No"),
+      items: external_exports.array(
+        external_exports.object({
+          itemId: external_exports.number(),
+          qty: external_exports.number().min(1),
+          discountPercent: external_exports.number().min(0).max(100).default(0),
+          listPrice: external_exports.number().optional()
+        })
+      ),
+      roundOff: external_exports.number().default(0),
+      transportId: external_exports.number().nullable().optional(),
+      parcel: external_exports.number().min(0).default(1)
+    })
+  ).mutation(async ({ input }) => {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const buyer = findById("buyers", input.buyerId);
+    if (!buyer) throw new Error("Buyer not found");
+    let transportId = input.transportId !== void 0 ? input.transportId : null;
+    let transportName = "N/A";
+    if (transportId === null) {
+      if (buyer.defaultTransportId) {
+        transportId = buyer.defaultTransportId;
+        transportName = buyer.defaultTransportName || "N/A";
+      }
+    } else {
+      const tr = findById("transports", transportId);
+      if (tr) {
+        transportName = tr.name;
+      } else {
+        transportId = null;
+      }
+    }
+    const companies = findAll("companies");
+    const company = companies[0] || {
+      companyName: "Alpha Wholesale",
+      address: "",
+      phone: "",
+      email: "",
+      gstNumber: "",
+      state: "Uttar Pradesh",
+      stateCode: "09"
+    };
+    let subtotal = 0;
+    let totalTax = 0;
+    let totalDiscount = 0;
+    let cgstTotal = 0;
+    let sgstTotal = 0;
+    let igstTotal = 0;
+    const companyState = company.address?.toLowerCase().includes("uttar pradesh") || company.gstNumber?.startsWith("09") ? "09" : "09";
+    const isInterState = !input.placeOfSupply.toLowerCase().includes("uttar pradesh") && !input.placeOfSupply.includes("09");
+    const compiledItems = input.items.map((entry) => {
+      const catalogItem = findById("items", entry.itemId);
+      if (!catalogItem) throw new Error(`Item ID ${entry.itemId} not found`);
+      const price = entry.listPrice !== void 0 ? entry.listPrice : parseFloat(catalogItem.listPrice);
+      const qty = entry.qty;
+      const discPercent = entry.discountPercent;
+      const taxPercent = parseFloat(catalogItem.taxPercent);
+      const grossAmount = price * qty;
+      const discountAmount = grossAmount * (discPercent / 100);
+      const taxableAmount = grossAmount - discountAmount;
+      const taxAmount = taxableAmount * (taxPercent / 100);
+      const finalAmount = taxableAmount + taxAmount;
+      subtotal += grossAmount;
+      totalDiscount += discountAmount;
+      totalTax += taxAmount;
+      if (isInterState) {
+        igstTotal += taxAmount;
+      } else {
+        cgstTotal += taxAmount / 2;
+        sgstTotal += taxAmount / 2;
+      }
+      return {
+        itemId: entry.itemId,
+        name: catalogItem.name,
+        hsnCode: catalogItem.hsnCode,
+        qty,
+        unit: catalogItem.unit,
+        listPrice: price.toFixed(2),
+        discountPercent: discPercent.toFixed(2),
+        taxPercent: catalogItem.taxPercent,
+        amount: finalAmount.toFixed(2)
+      };
+    });
+    const calculatedSubtotal = subtotal - totalDiscount;
+    const calculatedTotalBeforeRound = calculatedSubtotal + totalTax;
+    let finalRoundOff = input.roundOff;
+    if (finalRoundOff === 0) {
+      const roundedTotal = Math.round(calculatedTotalBeforeRound);
+      finalRoundOff = roundedTotal - calculatedTotalBeforeRound;
+    }
+    const totalAmount = calculatedTotalBeforeRound + finalRoundOff;
+    const billNumber = generateNextBillNumber();
+    const result = insert("bills", {
+      billNumber,
+      billDate: input.billDate,
+      dueDate: input.dueDate,
+      buyerId: input.buyerId,
+      buyerName: buyer.companyName,
+      buyerGst: buyer.gstNumber,
+      buyerAddress: buyer.address,
+      buyerPhone: buyer.phone,
+      buyerEmail: buyer.phone ? `${buyer.phone}@gmail.com` : null,
+      // Fallback placeholder
+      placeOfSupply: input.placeOfSupply,
+      reverseCharge: input.reverseCharge,
+      items: compiledItems,
+      cgstAmount: cgstTotal.toFixed(2),
+      sgstAmount: sgstTotal.toFixed(2),
+      igstAmount: igstTotal.toFixed(2),
+      totalTax: totalTax.toFixed(2),
+      subtotal: subtotal.toFixed(2),
+      discountAmount: totalDiscount.toFixed(2),
+      roundOff: finalRoundOff.toFixed(2),
+      totalAmount: totalAmount.toFixed(2),
+      transportId,
+      transportName,
+      parcel: input.parcel,
+      createdAt: now,
+      updatedAt: now
+    });
+    const totalQty = compiledItems.reduce((sum, item) => sum + item.qty, 0);
+    insert("transactions", {
+      buyerId: input.buyerId,
+      bookType: "CC",
+      transactionDate: input.billDate,
+      dueDate: input.dueDate,
+      amount: totalAmount.toFixed(2),
+      trouserQuantity: totalQty,
+      checkNumber: `INV-${billNumber}`,
+      transactionType: "Sale",
+      includeInReporting: true,
+      billId: result.id,
+      deleted: false,
+      deletedReason: null,
+      deletedAt: null,
+      createdAt: now,
+      updatedAt: now
+    });
+    return { id: result.id, bill: result, message: "Bill created successfully" };
+  }),
+  update: publicQuery.input(
+    external_exports.object({
+      id: external_exports.number(),
+      buyerId: external_exports.number().optional(),
+      billDate: external_exports.string().optional(),
+      dueDate: external_exports.string().nullable().optional(),
+      placeOfSupply: external_exports.string().optional(),
+      reverseCharge: external_exports.enum(["Yes", "No"]).optional(),
+      items: external_exports.array(
+        external_exports.object({
+          itemId: external_exports.number(),
+          qty: external_exports.number().min(1),
+          discountPercent: external_exports.number().min(0).max(100).default(0),
+          listPrice: external_exports.number().optional()
+        })
+      ).optional(),
+      roundOff: external_exports.number().optional(),
+      transportId: external_exports.number().nullable().optional(),
+      parcel: external_exports.number().min(0).optional()
+    })
+  ).mutation(async ({ input }) => {
+    const existingBill = findById("bills", input.id);
+    if (!existingBill) throw new Error("Bill not found");
+    const updateValues = {};
+    let buyerId = input.buyerId !== void 0 ? input.buyerId : existingBill.buyerId;
+    let billDate = input.billDate !== void 0 ? input.billDate : existingBill.billDate;
+    let dueDate = input.dueDate !== void 0 ? input.dueDate : existingBill.dueDate;
+    let placeOfSupply = input.placeOfSupply !== void 0 ? input.placeOfSupply : existingBill.placeOfSupply;
+    let reverseCharge = input.reverseCharge !== void 0 ? input.reverseCharge : existingBill.reverseCharge;
+    const buyer = findById("buyers", buyerId);
+    if (!buyer) throw new Error("Buyer not found");
+    updateValues.buyerId = buyerId;
+    updateValues.buyerName = buyer.companyName;
+    updateValues.buyerGst = buyer.gstNumber;
+    updateValues.buyerAddress = buyer.address;
+    updateValues.buyerPhone = buyer.phone;
+    updateValues.billDate = billDate;
+    updateValues.dueDate = dueDate;
+    updateValues.placeOfSupply = placeOfSupply;
+    updateValues.reverseCharge = reverseCharge;
+    if (input.transportId !== void 0) {
+      if (input.transportId === null) {
+        updateValues.transportId = null;
+        updateValues.transportName = "N/A";
+      } else {
+        const tr = findById("transports", input.transportId);
+        if (tr) {
+          updateValues.transportId = input.transportId;
+          updateValues.transportName = tr.name;
+        } else {
+          updateValues.transportId = null;
+          updateValues.transportName = "N/A";
+        }
+      }
+    }
+    if (input.parcel !== void 0) {
+      updateValues.parcel = input.parcel;
+    }
+    if (input.items !== void 0) {
+      const companies = findAll("companies");
+      const company = companies[0] || { companyName: "Alpha Wholesale", address: "", phone: "", email: "", gstNumber: "" };
+      let subtotal = 0;
+      let totalTax = 0;
+      let totalDiscount = 0;
+      let cgstTotal = 0;
+      let sgstTotal = 0;
+      let igstTotal = 0;
+      const isInterState = !placeOfSupply.toLowerCase().includes("uttar pradesh") && !placeOfSupply.includes("09");
+      const compiledItems = input.items.map((entry) => {
+        const catalogItem = findById("items", entry.itemId);
+        if (!catalogItem) throw new Error(`Item ID ${entry.itemId} not found`);
+        const price = entry.listPrice !== void 0 ? entry.listPrice : parseFloat(catalogItem.listPrice);
+        const qty = entry.qty;
+        const discPercent = entry.discountPercent;
+        const taxPercent = parseFloat(catalogItem.taxPercent);
+        const grossAmount = price * qty;
+        const discountAmount = grossAmount * (discPercent / 100);
+        const taxableAmount = grossAmount - discountAmount;
+        const taxAmount = taxableAmount * (taxPercent / 100);
+        const finalAmount = taxableAmount + taxAmount;
+        subtotal += grossAmount;
+        totalDiscount += discountAmount;
+        totalTax += taxAmount;
+        if (isInterState) {
+          igstTotal += taxAmount;
+        } else {
+          cgstTotal += taxAmount / 2;
+          sgstTotal += taxAmount / 2;
+        }
+        return {
+          itemId: entry.itemId,
+          name: catalogItem.name,
+          hsnCode: catalogItem.hsnCode,
+          qty,
+          unit: catalogItem.unit,
+          listPrice: price.toFixed(2),
+          discountPercent: discPercent.toFixed(2),
+          taxPercent: catalogItem.taxPercent,
+          amount: finalAmount.toFixed(2)
+        };
+      });
+      const calculatedSubtotal = subtotal - totalDiscount;
+      const calculatedTotalBeforeRound = calculatedSubtotal + totalTax;
+      let finalRoundOff = input.roundOff !== void 0 ? input.roundOff : parseFloat(existingBill.roundOff);
+      if (input.roundOff === void 0) {
+        const roundedTotal = Math.round(calculatedTotalBeforeRound);
+        finalRoundOff = roundedTotal - calculatedTotalBeforeRound;
+      }
+      const totalAmount = calculatedTotalBeforeRound + finalRoundOff;
+      updateValues.items = compiledItems;
+      updateValues.cgstAmount = cgstTotal.toFixed(2);
+      updateValues.sgstAmount = sgstTotal.toFixed(2);
+      updateValues.igstAmount = igstTotal.toFixed(2);
+      updateValues.totalTax = totalTax.toFixed(2);
+      updateValues.subtotal = subtotal.toFixed(2);
+      updateValues.discountAmount = totalDiscount.toFixed(2);
+      updateValues.roundOff = finalRoundOff.toFixed(2);
+      updateValues.totalAmount = totalAmount.toFixed(2);
+    } else if (input.roundOff !== void 0) {
+      const subtotalVal = parseFloat(existingBill.subtotal) - parseFloat(existingBill.discountAmount);
+      const beforeRound = subtotalVal + parseFloat(existingBill.totalTax);
+      const totalVal = beforeRound + input.roundOff;
+      updateValues.roundOff = input.roundOff.toFixed(2);
+      updateValues.totalAmount = totalVal.toFixed(2);
+    }
+    updateValues.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const result = update("bills", input.id, updateValues);
+    if (!result) throw new Error("Bill not found");
+    const associatedTx = findOne("transactions", (t2) => t2.billId === existingBill.id && !t2.deleted);
+    const totalQty = (updateValues.items || existingBill.items).reduce((sum, item) => sum + item.qty, 0);
+    const updatedAmt = updateValues.totalAmount !== void 0 ? parseFloat(updateValues.totalAmount) : parseFloat(existingBill.totalAmount);
+    if (associatedTx) {
+      update("transactions", associatedTx.id, {
+        buyerId,
+        transactionDate: billDate,
+        dueDate,
+        amount: updatedAmt.toFixed(2),
+        trouserQuantity: totalQty,
+        checkNumber: `INV-${existingBill.billNumber}`,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    } else {
+      insert("transactions", {
+        buyerId,
+        bookType: "CC",
+        transactionDate: billDate,
+        dueDate,
+        amount: updatedAmt.toFixed(2),
+        trouserQuantity: totalQty,
+        checkNumber: `INV-${existingBill.billNumber}`,
+        transactionType: "Sale",
+        includeInReporting: true,
+        billId: existingBill.id,
+        deleted: false,
+        deletedReason: null,
+        deletedAt: null,
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+    return { id: input.id, bill: result, message: "Bill updated successfully" };
+  }),
+  delete: publicQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
+    const success2 = remove("bills", input.id);
+    if (!success2) throw new Error("Bill not found");
+    const associatedTx = findOne("transactions", (t2) => t2.billId === input.id && !t2.deleted);
+    if (associatedTx) {
+      update("transactions", associatedTx.id, {
+        deleted: true,
+        deletedReason: "Bill Deleted",
+        deletedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+    return { message: "Bill deleted successfully" };
+  }),
+  detail: publicQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
+    const bill = findById("bills", input.id);
+    if (!bill) throw new Error("Bill not found");
+    return bill;
+  })
+});
+
+// api/routers/transport.ts
+var transportRouter = createRouter({
+  list: publicQuery.input(
+    external_exports.object({
+      search: external_exports.string().optional(),
+      sortBy: external_exports.string().optional(),
+      sortOrder: external_exports.enum(["asc", "desc"]).default("asc")
+    }).optional()
+  ).query(async ({ input }) => {
+    let transports = findAll("transports");
+    if (input?.search) {
+      const searchLower = input.search.toLowerCase();
+      transports = transports.filter(
+        (t2) => t2.name.toLowerCase().includes(searchLower) || t2.vehicleNumber && t2.vehicleNumber.toLowerCase().includes(searchLower)
+      );
+    }
+    if (input?.sortBy) {
+      const key = input.sortBy;
+      transports.sort((a, b) => {
+        const valA = String(a[key] || "");
+        const valB = String(b[key] || "");
+        if (input.sortOrder === "desc") {
+          return valB.localeCompare(valA, void 0, { numeric: true });
+        }
+        return valA.localeCompare(valB, void 0, { numeric: true });
+      });
+    } else {
+      transports.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return {
+      transports,
+      total: transports.length
+    };
+  }),
+  create: publicQuery.input(
+    external_exports.object({
+      name: external_exports.string().min(1),
+      phone: external_exports.string().nullable().optional(),
+      vehicleNumber: external_exports.string().nullable().optional()
+    })
+  ).mutation(async ({ input }) => {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const result = insert("transports", {
+      name: input.name,
+      phone: input.phone || null,
+      vehicleNumber: input.vehicleNumber || null,
+      createdAt: now,
+      updatedAt: now
+    });
+    return { id: result.id, transport: result, message: "Transport created successfully" };
+  }),
+  update: publicQuery.input(
+    external_exports.object({
+      id: external_exports.number(),
+      name: external_exports.string().optional(),
+      phone: external_exports.string().nullable().optional(),
+      vehicleNumber: external_exports.string().nullable().optional()
+    })
+  ).mutation(async ({ input }) => {
+    const { id, ...updateData } = input;
+    const updateValues = {};
+    if (updateData.name !== void 0) updateValues.name = updateData.name;
+    if (updateData.phone !== void 0) updateValues.phone = updateData.phone || null;
+    if (updateData.vehicleNumber !== void 0) updateValues.vehicleNumber = updateData.vehicleNumber || null;
+    updateValues.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const result = update("transports", id, updateValues);
+    if (!result) throw new Error("Transport not found");
+    return { id, transport: result, message: "Transport updated successfully" };
+  }),
+  delete: publicQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
+    const success2 = remove("transports", input.id);
+    if (!success2) throw new Error("Transport not found");
+    return { message: "Transport deleted successfully" };
+  }),
+  detail: publicQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
+    const transport = findById("transports", input.id);
+    if (!transport) throw new Error("Transport not found");
+    return transport;
   })
 });
 
@@ -24420,7 +25479,10 @@ var appRouter = createRouter({
   buyer: buyerRouter,
   report: reportRouter,
   audit: auditRouter,
-  settings: settingsRouter
+  settings: settingsRouter,
+  item: itemRouter,
+  bill: billRouter,
+  transport: transportRouter
 });
 
 // api/context.ts
