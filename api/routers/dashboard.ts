@@ -159,7 +159,7 @@ export const dashboardRouter = createRouter({
       const limit = input?.limit || 5;
       const allBuyers = findAll<Buyer>("buyers");
       const allTxs = findAll<Transaction>("transactions").filter(
-        t => !t.deleted && t.transactionType === "Sale"
+        t => !t.deleted && t.transactionType === "Sale" && t.includeInReporting
       );
 
       const volumeMap = new Map<number, number>();

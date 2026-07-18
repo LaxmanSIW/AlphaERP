@@ -26,7 +26,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-type ReportTab = "outstanding" | "statement" | "movement" | "sales" | "items" | "gst" | "transport";
+type ReportTab = "outstanding" | "statement" | "movement" | "sales" | "items" | "itemMovement" | "gst" | "transport";
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState<ReportTab>("outstanding");
@@ -36,6 +36,7 @@ export default function Reports() {
     { key: "statement" as ReportTab, label: "Buyer Statement", icon: FileText },
     { key: "movement" as ReportTab, label: "Trouser Movement", icon: BarChart3 },
     { key: "sales" as ReportTab, label: "Sales (Monthly / Weekly)", icon: TrendingUp },
+    { key: "itemMovement" as ReportTab, label: "Item Movement", icon: BarChart3 },
     { key: "items" as ReportTab, label: "Item Performance", icon: BarChart3 },
     { key: "gst" as ReportTab, label: "GST / Tax Summary", icon: FileText },
     { key: "transport" as ReportTab, label: "Transport Performance", icon: Truck },
@@ -75,6 +76,7 @@ export default function Reports() {
       {activeTab === "statement" && <BuyerStatementReport />}
       {activeTab === "movement" && <TrouserMovementReport />}
       {activeTab === "sales" && <SalesReport />}
+      {activeTab === "itemMovement" && <ItemMovementReport />}
       {activeTab === "items" && <ItemPerformanceReport />}
       {activeTab === "gst" && <GstTaxSummaryReport />}
       {activeTab === "transport" && <TransportPerformanceReport />}
@@ -830,6 +832,144 @@ function ItemPerformanceReport() {
                 }
                 {!isLoading && table.filteredData?.length === 0 && (
                   <tr><td colSpan={7} className="py-8 text-center text-sm text-[#3d4f6f]">No product sales performance data available</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ItemMovementReport() {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const { data, isLoading } = trpc.report.itemMovement.useQuery({
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+
+  const table = useTableState({
+    data: (data as any[]) || [],
+    searchFields: ["name", "hsnCode"],
+    defaultSortKey: "totalQty",
+    defaultSortDirection: "desc",
+  });
+
+  const totalQuantity = table.filteredData?.reduce((sum: number, item: any) => sum + (item.totalQty || 0), 0) || 0;
+  const totalRevenue = table.filteredData?.reduce((sum: number, item: any) => sum + (item.totalRevenue || 0), 0) || 0;
+
+  const exportCSV = () => {
+    if (!data) return;
+    const headers = ["Item Name", "HSN Code", "Quantity Sold", "Gross Sales", "Discount", "Tax Amount", "Total Revenue"];
+    const rows = table.filteredData.map((item: any) => [
+      item.name,
+      item.hsnCode,
+      item.totalQty,
+      item.totalSales,
+      item.totalDiscount,
+      item.totalTax,
+      item.totalRevenue,
+    ]);
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `item-movement-report-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="space-y-1">
+          <Label className="text-xs text-[#3d4f6f]">From Date</Label>
+          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40 bg-white border-[#d9cfc0] text-sm h-8" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-[#3d4f6f]">To Date</Label>
+          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40 bg-white border-[#d9cfc0] text-sm h-8" />
+        </div>
+        <Button variant="outline" size="sm" onClick={exportCSV} disabled={!data?.length} className="border-[#d9cfc0] text-xs ml-auto">
+          <Download className="w-3 h-3 mr-1" /> Export CSV
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="border-[#d9cfc0] bg-white">
+          <CardContent className="p-4">
+            <p className="text-xs text-[#3d4f6f] uppercase">Total Quantity Sold</p>
+            <p className="text-2xl font-semibold font-mono text-[#1e2a4a] mt-1">{totalQuantity.toLocaleString("en-IN")} Pcs.</p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#d9cfc0] bg-white">
+          <CardContent className="p-4">
+            <p className="text-xs text-[#3d4f6f] uppercase">Total Revenue Generated</p>
+            <p className="text-2xl font-semibold font-mono text-green-600 mt-1">₹ {totalRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#d9cfc0] bg-white">
+          <CardContent className="p-4">
+            <p className="text-xs text-[#3d4f6f] uppercase">Unique Products Sold</p>
+            <p className="text-2xl font-semibold font-mono text-[#c4703f] mt-1">{table.filteredData?.filter((i: any) => i.totalQty > 0).length || 0}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Chart */}
+      {table.filteredData && table.filteredData.length > 0 && (
+        <Card className="border-[#d9cfc0] bg-white p-4">
+          <div className="text-sm font-semibold text-[#1e2a4a] mb-2">Item Sales Chart (Quantity vs Revenue)</div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={table.filteredData.slice(0, 10)}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8e0d4" />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#3d4f6f" }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#3d4f6f" }} name="Qty" />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#3d4f6f" }} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} name="Revenue" />
+              <Tooltip formatter={(value: number, name: string) => [name === "totalRevenue" ? `₹ ${value.toLocaleString("en-IN")}` : value, name === "totalRevenue" ? "Revenue" : "Quantity Sold"]} contentStyle={{ backgroundColor: "white", border: "1px solid #d9cfc0", borderRadius: "8px", fontSize: "12px" }} />
+              <Legend wrapperStyle={{ fontSize: "12px" }} />
+              <Bar yAxisId="left" dataKey="totalQty" name="Qty Sold" fill="#c4703f" radius={[2, 2, 0, 0]} />
+              <Bar yAxisId="right" dataKey="totalRevenue" name="Revenue" fill="#1e2a4a" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      {/* Table */}
+      <Card className="border-[#d9cfc0] bg-white">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#f5f0e8] border-b border-[#e8e0d4] text-xs text-[#3d4f6f] uppercase">
+                  <SortableHeader label="Item Name" sortKey="name" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} />
+                  <SortableHeader label="HSN" sortKey="hsnCode" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} />
+                  <SortableHeader label="Qty Sold" sortKey="totalQty" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
+                  <SortableHeader label="Gross Sales" sortKey="totalSales" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
+                  <SortableHeader label="Discount" sortKey="totalDiscount" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
+                  <SortableHeader label="Tax" sortKey="totalTax" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
+                  <SortableHeader label="Total Revenue" sortKey="totalRevenue" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? Array.from({ length: 5 }).map((_, i) => <tr key={i}>{Array.from({ length: 7 }).map((_, j) => <td key={j} className="py-3 px-4"><div className="h-4 bg-[#e8e0d4] rounded animate-pulse" /></td>)}</tr>) :
+                  table.filteredData?.map((item: any, i: number) => (
+                    <tr key={i} className="border-b border-[#f5f0e8] hover:bg-[#f5f0e8]/50">
+                      <td className="py-3 px-4 text-sm font-medium text-[#1e2a4a]">{item.name}</td>
+                      <td className="py-3 px-4 text-sm font-mono text-[#3d4f6f]">{item.hsnCode}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold">{item.totalQty.toLocaleString("en-IN")}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono">₹ {item.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono text-red-600">₹ {item.totalDiscount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono text-[#3d4f6f]">₹ {item.totalTax.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-sm text-right font-mono font-semibold text-green-600">₹ {item.totalRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))
+                }
+                {!isLoading && table.filteredData?.length === 0 && (
+                  <tr><td colSpan={7} className="py-8 text-center text-sm text-[#3d4f6f]">No product sales movement data available</td></tr>
                 )}
               </tbody>
             </table>

@@ -180,6 +180,10 @@ export default function Transactions() {
       toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
+    const isPayment = form.transactionType === "Payment_Received";
+    const qty = isPayment ? 0 : form.trouserQuantity;
+    const includeRep = isPayment ? false : form.includeInReporting;
+
     if (editingId) {
       updateMutation.mutate({
         id: editingId,
@@ -188,10 +192,10 @@ export default function Transactions() {
         transactionDate: form.transactionDate,
         dueDate: form.dueDate || undefined,
         amount: form.amount,
-        trouserQuantity: form.trouserQuantity,
+        trouserQuantity: qty,
         checkNumber: form.checkNumber || undefined,
         transactionType: form.transactionType,
-        includeInReporting: form.includeInReporting,
+        includeInReporting: includeRep,
       });
     } else {
       createMutation.mutate({
@@ -200,10 +204,10 @@ export default function Transactions() {
         transactionDate: form.transactionDate,
         dueDate: form.dueDate || undefined,
         amount: form.amount,
-        trouserQuantity: form.trouserQuantity,
+        trouserQuantity: qty,
         checkNumber: form.checkNumber || undefined,
         transactionType: form.transactionType,
-        includeInReporting: form.includeInReporting,
+        includeInReporting: includeRep,
       });
     }
   }, [form, editingId, createMutation, updateMutation, toast]);
@@ -479,7 +483,15 @@ export default function Transactions() {
                     {(["Sale", "Payment_Received"] as const).map((tt) => (
                       <button
                         key={tt}
-                        onClick={() => setForm({ ...form, transactionType: tt })}
+                        onClick={() => {
+                          const isPayment = tt === "Payment_Received";
+                          setForm({
+                            ...form,
+                            transactionType: tt,
+                            trouserQuantity: isPayment ? 0 : form.trouserQuantity,
+                            includeInReporting: isPayment ? false : form.includeInReporting,
+                          });
+                        }}
                         className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                           form.transactionType === tt
                             ? tt === "Sale" ? "bg-red-500 text-white" : "bg-green-500 text-white"
@@ -523,13 +535,14 @@ export default function Transactions() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[#1e2a4a]">Trouser Quantity</Label>
+                  <Label className="text-[#1e2a4a] disabled:opacity-50">Trouser Quantity</Label>
                   <Input
                     type="number"
-                    value={form.trouserQuantity || ""}
+                    value={form.transactionType === "Payment_Received" ? "0" : (form.trouserQuantity || "")}
                     onChange={(e) => setForm({ ...form, trouserQuantity: parseInt(e.target.value) || 0 })}
                     placeholder="0"
-                    className="bg-[#f5f0e8] border-[#d9cfc0] text-right font-mono"
+                    disabled={form.transactionType === "Payment_Received"}
+                    className="bg-[#f5f0e8] border-[#d9cfc0] text-right font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -548,11 +561,12 @@ export default function Transactions() {
                 <input
                   type="checkbox"
                   id="includeInReporting"
-                  checked={form.includeInReporting}
+                  checked={form.transactionType === "Payment_Received" ? false : form.includeInReporting}
+                  disabled={form.transactionType === "Payment_Received"}
                   onChange={(e) => setForm({ ...form, includeInReporting: e.target.checked })}
-                  className="w-4 h-4 rounded border-[#d9cfc0] text-[#c4703f] focus:ring-[#c4703f]"
+                  className="w-4 h-4 rounded border-[#d9cfc0] text-[#c4703f] focus:ring-[#c4703f] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <Label htmlFor="includeInReporting" className="text-sm text-[#3d4f6f] cursor-pointer">
+                <Label htmlFor="includeInReporting" className={`text-sm text-[#3d4f6f] cursor-pointer ${form.transactionType === "Payment_Received" ? "opacity-50 cursor-not-allowed" : ""}`}>
                   Include in reporting
                 </Label>
               </div>

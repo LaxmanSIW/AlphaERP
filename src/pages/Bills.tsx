@@ -407,7 +407,7 @@ export default function Bills() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-[#1e2a4a]">Invoice Date</Label>
                     <Input
@@ -425,21 +425,6 @@ export default function Bills() {
                       onChange={(e) => setForm((prev) => ({ ...prev, dueDate: e.target.value || null }))}
                       className="bg-white border-[#dfd5c6]"
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[#1e2a4a]">Reverse Charge</Label>
-                    <Select
-                      value={form.reverseCharge}
-                      onValueChange={(val: "Yes" | "No") => setForm((prev) => ({ ...prev, reverseCharge: val }))}
-                    >
-                      <SelectTrigger className="bg-white border-[#dfd5c6]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="No">No</SelectItem>
-                        <SelectItem value="Yes">Yes</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
 
@@ -900,7 +885,6 @@ export default function Bills() {
                   <div className="flex"><span className="w-28 font-bold">Due Date</span><span>: {new Date(activePrintBill.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</span></div>
                 )}
                 <div className="flex"><span className="w-28 font-bold">Place of Supply</span><span>: {activePrintBill.placeOfSupply}</span></div>
-                <div className="flex"><span className="w-28 font-bold">Reverse Charge</span><span>: {activePrintBill.reverseCharge}</span></div>
                 {activePrintBill.transportName && activePrintBill.transportName !== "NA" && (
                   <div className="flex"><span className="w-28 font-bold">Transport Partner</span><span>: {activePrintBill.transportName}</span></div>
                 )}

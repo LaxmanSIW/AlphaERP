@@ -21,10 +21,10 @@ interface ItemFormData {
 
 const emptyForm: ItemFormData = {
   name: "",
-  hsnCode: "",
+  hsnCode: "62034200",
   listPrice: 0,
   unit: "Pcs.",
-  taxPercent: 18,
+  taxPercent: 5,
 };
 
 export default function Items() {

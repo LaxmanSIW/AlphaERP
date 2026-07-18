@@ -210,63 +210,74 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-        <KPICard
-          title="Total Sale Amount"
-          value={statsLoading ? "Loading..." : formatCurrency(allTimeSales?.totalSaleAmount || 0)}
-          icon={DollarSign}
-          iconColor="text-purple-600"
-          iconBg="bg-purple-100"
-          subtext={bookType === "ALL" ? "All books, all time" : `Alpha ${bookType}, all time`}
-        />
-        <KPICard
-          title="Total Payment Amount"
-          value={statsLoading ? "Loading..." : formatCurrency(allTimeSales?.totalPaymentAmount || 0)}
-          icon={Wallet}
-          iconColor="text-green-600"
-          iconBg="bg-green-100"
-          subtext={bookType === "ALL" ? "All books, all time" : `Alpha ${bookType}, all time`}
-        />
-        <KPICard
-          title="Total Sales"
-          value={statsLoading ? "Loading..." : formatCurrency(stats?.totalSales || 0)}
-          icon={TrendingUp}
-          iconColor="text-[#c4703f]"
-          iconBg="bg-[#c4703f]/10"
-          trend={{ value: 12.5, positive: true }}
-        />
-        <KPICard
-          title="Payments Received"
-          value={statsLoading ? "Loading..." : formatCurrency(stats?.totalPayments || 0)}
-          icon={Wallet}
-          iconColor="text-green-600"
-          iconBg="bg-green-100"
-          trend={{ value: 8.2, positive: true }}
-        />
-        <KPICard
-          title="Outstanding Balance"
-          value={statsLoading ? "Loading..." : formatCurrency(stats?.totalOutstanding || 0)}
-          icon={AlertCircle}
-          iconColor="text-red-500"
-          iconBg="bg-red-100"
-          subtext="Across all buyers"
-        />
-        <KPICard
-          title="Total Pieces Sold"
-          value={statsLoading ? "Loading..." : `${(stats?.totalPieces || 0).toLocaleString("en-IN")}`}
-          icon={Package}
-          iconColor="text-blue-500"
-          iconBg="bg-blue-100"
-          subtext="Trousers this period"
-        />
-        <KPICard
-          title="Total Parcels Sent"
-          value={parcelStatsLoading ? "Loading..." : `${(parcelStats?.totalParcels || 0).toLocaleString("en-IN")}`}
-          icon={Package}
-          iconColor="text-orange-600"
-          iconBg="bg-orange-100"
-          subtext="From created bills"
-        />
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-[10px] font-bold text-[#3d4f6f] uppercase tracking-wider mb-2.5">All-Time Accounts Overview</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <KPICard
+              title="Total Sale Amount"
+              value={statsLoading ? "Loading..." : formatCurrency(allTimeSales?.totalSaleAmount || 0)}
+              icon={DollarSign}
+              iconColor="text-purple-600"
+              iconBg="bg-purple-100"
+              subtext={bookType === "ALL" ? "All books, all time" : `Alpha ${bookType}, all time`}
+            />
+            <KPICard
+              title="Total Payment Amount"
+              value={statsLoading ? "Loading..." : formatCurrency(allTimeSales?.totalPaymentAmount || 0)}
+              icon={Wallet}
+              iconColor="text-green-600"
+              iconBg="bg-green-100"
+              subtext={bookType === "ALL" ? "All books, all time" : `Alpha ${bookType}, all time`}
+            />
+            <KPICard
+              title="Outstanding Balance"
+              value={statsLoading ? "Loading..." : formatCurrency(stats?.totalOutstanding || 0)}
+              icon={AlertCircle}
+              iconColor="text-red-500"
+              iconBg="bg-red-100"
+              subtext="Across all buyers"
+            />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-[10px] font-bold text-[#3d4f6f] uppercase tracking-wider mb-2.5">Current Period & Logistics Performance</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KPICard
+              title="Total Sales"
+              value={statsLoading ? "Loading..." : formatCurrency(stats?.totalSales || 0)}
+              icon={TrendingUp}
+              iconColor="text-[#c4703f]"
+              iconBg="bg-[#c4703f]/10"
+              trend={{ value: 12.5, positive: true }}
+            />
+            <KPICard
+              title="Payments Received"
+              value={statsLoading ? "Loading..." : formatCurrency(stats?.totalPayments || 0)}
+              icon={Wallet}
+              iconColor="text-green-600"
+              iconBg="bg-green-100"
+              trend={{ value: 8.2, positive: true }}
+            />
+            <KPICard
+              title="Total Pieces Sold"
+              value={statsLoading ? "Loading..." : `${(stats?.totalPieces || 0).toLocaleString("en-IN")}`}
+              icon={Package}
+              iconColor="text-blue-500"
+              iconBg="bg-blue-100"
+              subtext="Trousers this period"
+            />
+            <KPICard
+              title="Total Parcels Sent"
+              value={parcelStatsLoading ? "Loading..." : `${(parcelStats?.totalParcels || 0).toLocaleString("en-IN")}`}
+              icon={Package}
+              iconColor="text-orange-600"
+              iconBg="bg-orange-100"
+              subtext="From created bills"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Charts Row */}
