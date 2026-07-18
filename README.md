@@ -99,8 +99,8 @@ Here is a visual map of the workspace structure:
 
 ```text
 ├── api/                     # Backend Code (Hono Server + tRPC Routers)
-│   ├── json-db/             # Lightweight JSON File Database Engine
-│   │   ├── engine.ts        # Primary database engine (read/write JSON files)
+│   ├── json-db/             # SQLite Database Engine (better-sqlite3)
+│   │   ├── engine.ts        # Primary database engine (SQLite queries)
 │   │   ├── types.ts         # Types definitions (e.g. Bill, Transaction, Buyer)
 │   │   └── index.ts         # Database client initializer
 │   ├── queries/             # DB query helper abstractions
@@ -130,7 +130,7 @@ Here is a visual map of the workspace structure:
 ```
 
 ### Purpose of Core Folders & Propagation Path
-- **Database (`api/json-db/`)**: Local persistence is powered by JSON data stored directly on the container/virtual machine file system. This eliminates the need for complex external server setups during development.
+- **Database (`api/json-db/`)**: Local persistence is powered by a high-performance SQLite database (`better-sqlite3`) stored directly on the container/virtual machine file system (`data/sqlite.db`). This provides efficient, scalable querying without needing a complex external database server.
 - **Backend Routers (`api/routers/`)**: Define the server-side queries and mutations using `tRPC` and `Zod` validation schemas.
 - **Frontend Pages (`src/pages/`)**: Retrieve data reactively using `@tanstack/react-query` and `@trpc/react-query`. Every modification inside the backend routers automatically updates the typescript interfaces used on the frontend.
 

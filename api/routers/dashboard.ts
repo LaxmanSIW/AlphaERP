@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "../middleware";
-import { findAll, findMany } from "../queries/connection";
-import type { Buyer, Transaction } from "../queries/connection";
-import { summarizeAllTimeAmounts } from "../lib/dashboard-metrics";
+import { db } from "../json-db/engine";
 
 export const dashboardRouter = createRouter({
   stats: publicQuery
@@ -21,47 +19,44 @@ export const dashboardRouter = createRouter({
       const startOfMonth = `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`;
       const endOfMonth = `${currentYear}-${String(currentMonth).padStart(2, "0")}-31`;
 
-      const allTxs = findAll<Transaction>("transactions").filter(t => !t.deleted);
+      const bookFilter = input?.bookType && input.bookType !== "ALL" ? `AND bookType = '${input.bookType}'` : "";
 
-      // Filter by month/year
-      const monthTxs = allTxs.filter(t => t.transactionDate >= startOfMonth && t.transactionDate <= endOfMonth);
+      const monthSql = `SELECT transactionType, SUM(CAST(amount AS REAL)) as totalAmount, SUM(trouserQuantity) as totalQty FROM transactions WHERE deleted = 0 AND transactionDate >= ? AND transactionDate <= ? ${bookFilter} GROUP BY transactionType`;
+      const monthRows = db.prepare(monthSql).all(startOfMonth, endOfMonth) as any[];
 
-      // Filter by book type
-      const bookFilter = input?.bookType && input.bookType !== "ALL"
-        ? (t: Transaction) => t.bookType === input.bookType
-        : () => true;
+      let totalSales = 0;
+      let totalPayments = 0;
+      let totalPieces = 0;
 
-      const filteredMonthTxs = monthTxs.filter(bookFilter);
+      for (const row of monthRows) {
+        if (row.transactionType === "Sale") {
+          totalSales += row.totalAmount;
+        } else if (row.transactionType === "Payment_Received") {
+          totalPayments += row.totalAmount;
+        }
+      }
 
-      // Total Sales for period
-      const totalSales = filteredMonthTxs
-        .filter(t => t.transactionType === "Sale")
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      const piecesSql = `SELECT SUM(trouserQuantity) as totalPieces FROM transactions WHERE deleted = 0 AND transactionType = 'Sale' AND includeInReporting = 1 AND transactionDate >= ? AND transactionDate <= ? ${bookFilter}`;
+      const piecesRow = db.prepare(piecesSql).get(startOfMonth, endOfMonth) as any;
+      totalPieces = piecesRow?.totalPieces || 0;
 
-      // Total Payments for period
-      const totalPayments = filteredMonthTxs
-        .filter(t => t.transactionType === "Payment_Received")
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-      // Outstanding (all time)
-      const outstandingTxs = allTxs.filter(bookFilter);
-      const allSales = outstandingTxs
-        .filter(t => t.transactionType === "Sale")
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-      const allPayments = outstandingTxs
-        .filter(t => t.transactionType === "Payment_Received")
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-      const totalOutstanding = allSales - allPayments;
-
-      // Total Pieces (only included in reporting)
-      const totalPieces = filteredMonthTxs
-        .filter(t => t.transactionType === "Sale" && t.includeInReporting)
-        .reduce((sum, t) => sum + (t.trouserQuantity || 0), 0);
+      const outstandingSql = `SELECT transactionType, SUM(CAST(amount AS REAL)) as totalAmount FROM transactions WHERE deleted = 0 ${bookFilter} GROUP BY transactionType`;
+      const outstandingRows = db.prepare(outstandingSql).all() as any[];
+      
+      let allSales = 0;
+      let allPayments = 0;
+      for (const row of outstandingRows) {
+        if (row.transactionType === "Sale") {
+          allSales += row.totalAmount;
+        } else if (row.transactionType === "Payment_Received") {
+          allPayments += row.totalAmount;
+        }
+      }
 
       return {
         totalSales,
         totalPayments,
-        totalOutstanding,
+        totalOutstanding: allSales - allPayments,
         totalPieces,
         periodLabel: `${new Date(currentYear, currentMonth - 1).toLocaleString("default", { month: "long" })} ${currentYear}`,
       };
@@ -76,34 +71,21 @@ export const dashboardRouter = createRouter({
     )
     .query(async ({ input }) => {
       const limit = input?.limit || 5;
-      const allBuyers = findAll<Buyer>("buyers");
-      const allTxs = findAll<Transaction>("transactions").filter(t => !t.deleted);
-
-      const bookFilter = input?.bookType && input.bookType !== "ALL"
-        ? (t: Transaction) => t.bookType === input.bookType
-        : () => true;
-
-      const debtors = [];
-      for (const buyer of allBuyers) {
-        const buyerTxs = allTxs.filter(t => t.buyerId === buyer.id).filter(bookFilter);
-        const totalSales = buyerTxs
-          .filter(t => t.transactionType === "Sale")
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-        const totalPayments = buyerTxs
-          .filter(t => t.transactionType === "Payment_Received")
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-        const outstanding = totalSales - totalPayments;
-
-        if (outstanding > 0) {
-          debtors.push({
-            buyerId: buyer.id,
-            companyName: buyer.companyName,
-            outstanding,
-          });
-        }
-      }
-
-      return debtors.sort((a, b) => b.outstanding - a.outstanding).slice(0, limit);
+      const bookFilter = input?.bookType && input.bookType !== "ALL" ? `AND t.bookType = '${input.bookType}'` : "";
+      
+      const sql = `
+        SELECT b.id as buyerId, b.companyName, 
+               SUM(CASE WHEN t.transactionType = 'Sale' THEN CAST(t.amount AS REAL) ELSE 0 END) - 
+               SUM(CASE WHEN t.transactionType = 'Payment_Received' THEN CAST(t.amount AS REAL) ELSE 0 END) as outstanding
+        FROM buyers b
+        JOIN transactions t ON b.id = t.buyerId
+        WHERE t.deleted = 0 ${bookFilter}
+        GROUP BY b.id, b.companyName
+        HAVING outstanding > 0
+        ORDER BY outstanding DESC
+        LIMIT ?
+      `;
+      return db.prepare(sql).all(limit) as any[];
     }),
 
   topPaymasters: publicQuery
@@ -121,30 +103,16 @@ export const dashboardRouter = createRouter({
       cutoffDate.setDate(cutoffDate.getDate() - days);
       const cutoffStr = cutoffDate.toISOString().split("T")[0];
 
-      const allBuyers = findAll<Buyer>("buyers");
-      const allTxs = findAll<Transaction>("transactions").filter(
-        t => !t.deleted && t.transactionType === "Payment_Received" && t.transactionDate >= cutoffStr
-      );
-
-      // Group by buyer
-      const paymentMap = new Map<number, number>();
-      for (const tx of allTxs) {
-        paymentMap.set(tx.buyerId, (paymentMap.get(tx.buyerId) || 0) + parseFloat(tx.amount));
-      }
-
-      const result = [];
-      for (const [buyerId, totalPaid] of paymentMap) {
-        const buyer = allBuyers.find(b => b.id === buyerId);
-        if (buyer) {
-          result.push({
-            buyerId,
-            companyName: buyer.companyName,
-            totalPaid,
-          });
-        }
-      }
-
-      return result.sort((a, b) => b.totalPaid - a.totalPaid).slice(0, limit);
+      const sql = `
+        SELECT b.id as buyerId, b.companyName, SUM(CAST(t.amount AS REAL)) as totalPaid
+        FROM buyers b
+        JOIN transactions t ON b.id = t.buyerId
+        WHERE t.deleted = 0 AND t.transactionType = 'Payment_Received' AND t.transactionDate >= ?
+        GROUP BY b.id, b.companyName
+        ORDER BY totalPaid DESC
+        LIMIT ?
+      `;
+      return db.prepare(sql).all(cutoffStr, limit) as any[];
     }),
 
   topVolumeBuyers: publicQuery
@@ -157,29 +125,17 @@ export const dashboardRouter = createRouter({
     )
     .query(async ({ input }) => {
       const limit = input?.limit || 5;
-      const allBuyers = findAll<Buyer>("buyers");
-      const allTxs = findAll<Transaction>("transactions").filter(
-        t => !t.deleted && t.transactionType === "Sale" && t.includeInReporting
-      );
-
-      const volumeMap = new Map<number, number>();
-      for (const tx of allTxs) {
-        volumeMap.set(tx.buyerId, (volumeMap.get(tx.buyerId) || 0) + (tx.trouserQuantity || 0));
-      }
-
-      const result = [];
-      for (const [buyerId, totalQuantity] of volumeMap) {
-        const buyer = allBuyers.find(b => b.id === buyerId);
-        if (buyer) {
-          result.push({
-            buyerId,
-            companyName: buyer.companyName,
-            totalQuantity,
-          });
-        }
-      }
-
-      return result.sort((a, b) => b.totalQuantity - a.totalQuantity).slice(0, limit);
+      
+      const sql = `
+        SELECT b.id as buyerId, b.companyName, SUM(t.trouserQuantity) as totalQuantity
+        FROM buyers b
+        JOIN transactions t ON b.id = t.buyerId
+        WHERE t.deleted = 0 AND t.transactionType = 'Sale' AND t.includeInReporting = 1
+        GROUP BY b.id, b.companyName
+        ORDER BY totalQuantity DESC
+        LIMIT ?
+      `;
+      return db.prepare(sql).all(limit) as any[];
     }),
 
   monthlyTrends: publicQuery
@@ -191,33 +147,35 @@ export const dashboardRouter = createRouter({
     )
     .query(async ({ input }) => {
       const months = input?.months || 12;
-      const bookFilter = input?.bookType && input.bookType !== "ALL"
-        ? (t: Transaction) => t.bookType === input.bookType
-        : () => true;
-
-      const allTxs = findAll<Transaction>("transactions").filter(t => !t.deleted).filter(bookFilter);
+      const bookFilter = input?.bookType && input.bookType !== "ALL" ? `AND bookType = '${input.bookType}'` : "";
 
       const now = new Date();
+      const d = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+      const cutoffStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+
+      const sql = `
+        SELECT strftime('%Y-%m', transactionDate) as monthStr, 
+               SUM(CASE WHEN transactionType = 'Sale' THEN CAST(amount AS REAL) ELSE 0 END) as sales,
+               SUM(CASE WHEN transactionType = 'Payment_Received' THEN CAST(amount AS REAL) ELSE 0 END) as payments
+        FROM transactions
+        WHERE deleted = 0 AND transactionDate >= ? ${bookFilter}
+        GROUP BY monthStr
+        ORDER BY monthStr ASC
+      `;
+      const rows = db.prepare(sql).all(cutoffStr) as any[];
+
       const data = [];
+      const rowMap = new Map(rows.map(r => [r.monthStr, r]));
 
       for (let i = months - 1; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-        const monthEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-31`;
-
-        const monthTxs = allTxs.filter(t => t.transactionDate >= monthStart && t.transactionDate <= monthEnd);
-        const sales = monthTxs
-          .filter(t => t.transactionType === "Sale")
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-        const payments = monthTxs
-          .filter(t => t.transactionType === "Payment_Received")
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
+        const cur = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mStr = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}`;
+        const row = rowMap.get(mStr) || { sales: 0, payments: 0 };
         data.push({
-          month: d.toLocaleString("default", { month: "short" }),
-          year: d.getFullYear(),
-          sales,
-          payments,
+          month: cur.toLocaleString("default", { month: "short" }),
+          year: cur.getFullYear(),
+          sales: row.sales || 0,
+          payments: row.payments || 0,
         });
       }
 
@@ -233,30 +191,33 @@ export const dashboardRouter = createRouter({
     )
     .query(async ({ input }) => {
       const months = input?.months || 12;
-      const bookFilter = input?.bookType && input.bookType !== "ALL"
-        ? (t: Transaction) => t.bookType === input.bookType
-        : () => true;
-
-      const allTxs = findAll<Transaction>("transactions").filter(
-        t => !t.deleted && t.transactionType === "Sale" && t.includeInReporting
-      ).filter(bookFilter);
+      const bookFilter = input?.bookType && input.bookType !== "ALL" ? `AND bookType = '${input.bookType}'` : "";
 
       const now = new Date();
+      const d = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+      const cutoffStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+
+      const sql = `
+        SELECT strftime('%Y-%m', transactionDate) as monthStr, 
+               SUM(trouserQuantity) as quantity
+        FROM transactions
+        WHERE deleted = 0 AND transactionType = 'Sale' AND includeInReporting = 1 AND transactionDate >= ? ${bookFilter}
+        GROUP BY monthStr
+        ORDER BY monthStr ASC
+      `;
+      const rows = db.prepare(sql).all(cutoffStr) as any[];
+
       const data = [];
+      const rowMap = new Map(rows.map(r => [r.monthStr, r]));
 
       for (let i = months - 1; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-        const monthEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-31`;
-
-        const quantity = allTxs
-          .filter(t => t.transactionDate >= monthStart && t.transactionDate <= monthEnd)
-          .reduce((sum, t) => sum + (t.trouserQuantity || 0), 0);
-
+        const cur = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mStr = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}`;
+        const row = rowMap.get(mStr) || { quantity: 0 };
         data.push({
-          month: d.toLocaleString("default", { month: "short" }),
-          year: d.getFullYear(),
-          quantity,
+          month: cur.toLocaleString("default", { month: "short" }),
+          year: cur.getFullYear(),
+          quantity: row.quantity || 0,
         });
       }
 
@@ -270,11 +231,20 @@ export const dashboardRouter = createRouter({
       }).optional()
     )
     .query(async ({ input }) => {
-      const allTxs = findAll<Transaction>("transactions");
-      const summary = summarizeAllTimeAmounts(allTxs, input?.bookType as "CC" | "CS" | "ALL" | undefined);
-
+      const bookFilter = input?.bookType && input.bookType !== "ALL" ? `AND bookType = '${input.bookType}'` : "";
+      const sql = `
+        SELECT 
+          SUM(CASE WHEN transactionType = 'Sale' THEN CAST(amount AS REAL) ELSE 0 END) as allTimeSales,
+          SUM(CASE WHEN transactionType = 'Payment_Received' THEN CAST(amount AS REAL) ELSE 0 END) as allTimePayments
+        FROM transactions
+        WHERE deleted = 0 ${bookFilter}
+      `;
+      const row = db.prepare(sql).get() as any;
+      
       return {
-        ...summary,
+        totalSaleAmount: row.allTimeSales || 0,
+        totalPaymentAmount: row.allTimePayments || 0,
+        outstanding: (row.allTimeSales || 0) - (row.allTimePayments || 0),
         bookType: input?.bookType || "ALL",
       };
     }),
@@ -288,107 +258,107 @@ export const dashboardRouter = createRouter({
     )
     .query(async ({ input }) => {
       const { view, bookType } = input;
-      const allBills = findAll<any>("bills") || [];
-      const allTxs = findAll<any>("transactions").filter(t => !t.deleted);
-
-      let filteredBills = allBills;
+      let bookFilter = "";
       if (bookType && bookType !== "ALL") {
-        const matchingTxIds = new Set(
-          allTxs.filter(t => t.bookType === bookType && t.billId).map(t => t.billId)
-        );
-        filteredBills = allBills.filter(b => matchingTxIds.has(b.id));
+        bookFilter = `AND b.id IN (SELECT billId FROM transactions WHERE bookType = '${bookType}' AND billId IS NOT NULL)`;
       }
 
       const chartMap = new Map<string, number>();
 
       if (view === "Day") {
         const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+        const startStr = start.toISOString().split("T")[0];
+
+        const sql = `SELECT billDate, SUM(COALESCE(parcel, 1)) as count FROM bills b WHERE billDate >= ? ${bookFilter} GROUP BY billDate`;
+        const rows = db.prepare(sql).all(startStr) as any[];
+        
         for (let i = 29; i >= 0; i--) {
           const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-          const dateStr = d.toISOString().split("T")[0];
-          chartMap.set(dateStr, 0);
+          chartMap.set(d.toISOString().split("T")[0], 0);
         }
-        for (const bill of filteredBills) {
-          const bDate = bill.billDate;
-          if (chartMap.has(bDate)) {
-            chartMap.set(bDate, chartMap.get(bDate)! + (bill.parcel !== undefined ? (bill.parcel ?? 1) : 1));
-          }
-        }
+        for (const r of rows) if (chartMap.has(r.billDate)) chartMap.set(r.billDate, r.count);
+
       } else if (view === "Week") {
         const now = new Date();
+        const start = new Date(now.getTime() - 11 * 7 * 24 * 60 * 60 * 1000);
+        const startStr = start.toISOString().split("T")[0];
+
+        const sql = `SELECT billDate, COALESCE(parcel, 1) as parcelCount FROM bills b WHERE billDate >= ? ${bookFilter}`;
+        const rows = db.prepare(sql).all(startStr) as any[];
+
         const weekLabels: string[] = [];
         for (let i = 11; i >= 0; i--) {
           const d = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
           const startOfWeek = new Date(d);
           const day = startOfWeek.getDay();
-          const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-          startOfWeek.setDate(diff);
+          startOfWeek.setDate(startOfWeek.getDate() - day + (day === 0 ? -6 : 1));
           const label = `Wk ${String(startOfWeek.getDate()).padStart(2, "0")}/${String(startOfWeek.getMonth() + 1).padStart(2, "0")}`;
           chartMap.set(label, 0);
           weekLabels.push(label);
         }
 
-        for (const bill of filteredBills) {
-          const billTime = new Date(bill.billDate).getTime();
+        for (const row of rows) {
+          const billTime = new Date(row.billDate).getTime();
           for (let i = 11; i >= 0; i--) {
             const d = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
             const startOfWeek = new Date(d);
             const day = startOfWeek.getDay();
-            const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-            startOfWeek.setDate(diff);
+            startOfWeek.setDate(startOfWeek.getDate() - day + (day === 0 ? -6 : 1));
             startOfWeek.setHours(0, 0, 0, 0);
-
             const endOfWeek = new Date(startOfWeek);
             endOfWeek.setDate(startOfWeek.getDate() + 7);
 
             if (billTime >= startOfWeek.getTime() && billTime < endOfWeek.getTime()) {
               const label = weekLabels[11 - i];
-              chartMap.set(label, chartMap.get(label)! + (bill.parcel !== undefined ? (bill.parcel ?? 1) : 1));
+              chartMap.set(label, chartMap.get(label)! + row.parcelCount);
               break;
             }
           }
         }
       } else if (view === "Month") {
         const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
+
+        const sql = `SELECT strftime('%Y-%m', billDate) as mStr, SUM(COALESCE(parcel, 1)) as count FROM bills b WHERE billDate >= ? ${bookFilter} GROUP BY mStr`;
+        const rows = db.prepare(sql).all(startStr) as any[];
+
         for (let i = 11; i >= 0; i--) {
           const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
           const label = d.toLocaleString("default", { month: "short" }) + " " + String(d.getFullYear()).slice(-2);
           chartMap.set(label, 0);
         }
 
-        for (const bill of filteredBills) {
-          const bDate = new Date(bill.billDate);
-          const label = bDate.toLocaleString("default", { month: "short" }) + " " + String(bDate.getFullYear()).slice(-2);
-          if (chartMap.has(label)) {
-            chartMap.set(label, chartMap.get(label)! + (bill.parcel !== undefined ? (bill.parcel ?? 1) : 1));
-          }
+        for (const r of rows) {
+          const [y, m] = r.mStr.split('-');
+          const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+          const label = d.toLocaleString("default", { month: "short" }) + " " + String(d.getFullYear()).slice(-2);
+          if (chartMap.has(label)) chartMap.set(label, chartMap.get(label)! + r.count);
         }
       } else if (view === "Year") {
         const now = new Date();
-        const currentYear = now.getFullYear();
-        for (let i = 4; i >= 0; i--) {
-          const year = currentYear - i;
-          chartMap.set(String(year), 0);
-        }
+        const startYear = now.getFullYear() - 4;
+        const startStr = `${startYear}-01-01`;
 
-        for (const bill of filteredBills) {
-          const bDate = new Date(bill.billDate);
-          const label = String(bDate.getFullYear());
-          if (chartMap.has(label)) {
-            chartMap.set(label, chartMap.get(label)! + (bill.parcel !== undefined ? (bill.parcel ?? 1) : 1));
-          }
+        const sql = `SELECT strftime('%Y', billDate) as yStr, SUM(COALESCE(parcel, 1)) as count FROM bills b WHERE billDate >= ? ${bookFilter} GROUP BY yStr`;
+        const rows = db.prepare(sql).all(startStr) as any[];
+
+        for (let i = 4; i >= 0; i--) {
+          chartMap.set(String(now.getFullYear() - i), 0);
+        }
+        for (const r of rows) {
+          if (chartMap.has(r.yStr)) chartMap.set(r.yStr, chartMap.get(r.yStr)! + r.count);
         }
       }
 
-      const chartData = Array.from(chartMap.entries()).map(([label, value]) => ({
-        label,
-        value,
-      }));
-
-      const totalParcelsCount = filteredBills.reduce((sum, b) => sum + (b.parcel !== undefined ? (b.parcel ?? 1) : 1), 0);
+      const chartData = Array.from(chartMap.entries()).map(([label, value]) => ({ label, value }));
+      
+      const totalSql = `SELECT SUM(COALESCE(parcel, 1)) as count FROM bills b WHERE 1=1 ${bookFilter}`;
+      const totalRow = db.prepare(totalSql).get() as any;
 
       return {
-        totalParcels: totalParcelsCount,
+        totalParcels: totalRow.count || 0,
         chartData,
       };
     }),

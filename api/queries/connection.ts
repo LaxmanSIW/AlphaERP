@@ -1,4 +1,4 @@
-import { seedDatabase } from "../json-db/engine";
+import { seedDatabase } from "../json-db/seed";
 
 // Initialize seed data on first import
 seedDatabase();
@@ -33,4 +33,5 @@ export type {
   InsertBill,
   InsertCompany,
   InsertTransport,
+  BillItem,
 } from "../json-db/types";

@@ -48,10 +48,10 @@ export const transactionRouter = createRouter({
         items = items.filter(t => t.transactionType === input.transactionType);
       }
       if (input?.startDate) {
-        items = items.filter(t => t.transactionDate >= input.startDate);
+        items = items.filter(t => t.transactionDate >= input.startDate!);
       }
       if (input?.endDate) {
-        items = items.filter(t => t.transactionDate <= input.endDate);
+        items = items.filter(t => t.transactionDate <= input.endDate!);
       }
       if (input?.buyerId) {
         items = items.filter(t => t.buyerId === input.buyerId);
@@ -182,6 +182,7 @@ export const transactionRouter = createRouter({
         newValues: updateValues as unknown as Record<string, unknown>,
         userId: "system",
         reason: null,
+        createdAt: new Date().toISOString(),
       });
 
       return { id, message: "Transaction updated successfully" };
@@ -222,6 +223,7 @@ export const transactionRouter = createRouter({
         newValues: null,
         userId: "system",
         reason: input.reason,
+        createdAt: new Date().toISOString(),
       });
 
       return { id: input.id, message: "Transaction archived successfully" };

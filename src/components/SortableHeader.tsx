@@ -2,10 +2,10 @@ import { ArrowUp, ArrowDown } from "lucide-react";
 
 interface SortableHeaderProps {
   label: string;
-  sortKey: string;
-  currentSortKey: string | null;
+  sortKey: any;
+  currentSortKey: any;
   sortDirection: "asc" | "desc" | null;
-  onSort: (key: string) => void;
+  onSort: (key: any) => void;
   align?: "left" | "center" | "right";
   className?: string;
 }

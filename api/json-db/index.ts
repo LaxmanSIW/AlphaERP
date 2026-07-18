@@ -11,5 +11,6 @@ export {
   update,
   remove,
   count,
-  seedDatabase,
 } from "./engine";
+
+export { seedDatabase } from "./seed";
