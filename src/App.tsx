@@ -9,6 +9,8 @@ import BulkUpload from "@/pages/BulkUpload";
 import Login from "@/pages/Login";
 import About from "@/pages/About";
 import Settings from "@/pages/Settings";
+import Bills from "@/pages/Bills";
+import Items from "@/pages/Items";
 import NotFound from "@/pages/NotFound";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -41,6 +43,26 @@ export default function App() {
           <RequireAuth>
             <Layout>
               <Dashboard />
+            </Layout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/bills"
+        element={
+          <RequireAuth>
+            <Layout>
+              <Bills />
+            </Layout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/items"
+        element={
+          <RequireAuth>
+            <Layout>
+              <Items />
             </Layout>
           </RequireAuth>
         }

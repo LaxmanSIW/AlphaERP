@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { User, Buyer, Transaction, AuditLog } from "./types";
+import type { User, Buyer, Transaction, AuditLog, Item, Bill, Company } from "./types";
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 
@@ -9,6 +9,9 @@ interface Database {
   buyers: Buyer[];
   transactions: Transaction[];
   auditLogs: AuditLog[];
+  items: Item[];
+  bills: Bill[];
+  companies: Company[];
 }
 
 type TableName = keyof Database;
@@ -49,6 +52,9 @@ let nextIds: Record<TableName, number> = {
   buyers: 1,
   transactions: 1,
   auditLogs: 1,
+  items: 1,
+  bills: 1,
+  companies: 1,
 };
 
 // Initialize next IDs from existing data
@@ -233,6 +239,55 @@ export function seedDatabase() {
   // Re-init next IDs
   nextIds.buyers = buyerRows.length + 1;
   nextIds.transactions = transactionData.length + 1;
+
+  // Seed default company if empty
+  const existingCompanies = readTable<Company>("companies");
+  if (existingCompanies.length === 0) {
+    const defaultCompany: Company = {
+      id: 1,
+      companyName: "Alpha Wholesale",
+      address: "123 Commercial Belt, Sector 4, Noida, Uttar Pradesh",
+      phone: "+91 9999999999",
+      email: "company@gmail.com",
+      gstNumber: "09AAAAA1234A1Z2",
+      bankName: "ICICI Bank",
+      accountNumber: "123456789",
+      ifscCode: "ICIC11222",
+      branchName: "Noida",
+      authorizedSignatory: "Add Name",
+      terms: [
+        "1. Goods once sold will not be taken back.",
+        "2. Interest @ 18% p.a. will be charged if the payment for Company Name is not made within the stipulated time.",
+        "3. Subject to 'Delhi' Jurisdiction only."
+      ],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    writeTable("companies", [defaultCompany]);
+    nextIds.companies = 2;
+  }
+
+  // Seed default items if empty
+  const existingItems = readTable<Item>("items");
+  if (existingItems.length === 0) {
+    const defaultItems: Item[] = [
+      { id: 1, name: "Denim Trousers", hsnCode: "39231020", listPrice: "800.00", unit: "Pcs.", taxPercent: "18.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+      { id: 2, name: "Cotton Polo Shirt", hsnCode: "61051010", listPrice: "600.00", unit: "Pcs.", taxPercent: "12.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+      { id: 3, name: "Casual Summer Shorts", hsnCode: "62034200", listPrice: "450.00", unit: "Pcs.", taxPercent: "5.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+      { id: 4, name: "Formal Linen Blazer", hsnCode: "62031100", listPrice: "2500.00", unit: "Pcs.", taxPercent: "18.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+      { id: 5, name: "Silk Evening Gown", hsnCode: "62044200", listPrice: "4500.00", unit: "Pcs.", taxPercent: "18.00", createdAt: now.toISOString(), updatedAt: now.toISOString() },
+    ];
+    writeTable("items", defaultItems);
+    nextIds.items = 6;
+  }
+
+  const existingBills = readTable<Bill>("bills");
+  if (existingBills.length > 0) {
+    const maxBillId = Math.max(...existingBills.map((b) => b.id || 0));
+    nextIds.bills = maxBillId + 1;
+  } else {
+    nextIds.bills = 1;
+  }
 
   console.log(`Seeded ${buyerRows.length} buyers and ${transactionData.length} transactions`);
 }

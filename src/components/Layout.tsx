@@ -13,6 +13,8 @@ import {
   Info,
   KeyRound,
   Settings,
+  FileText,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,12 +27,14 @@ import { trpc } from "@/providers/trpc";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard, shortcut: "1" },
-  { path: "/transactions", label: "Transactions", icon: BookOpen, shortcut: "2" },
-  { path: "/buyers", label: "Buyers", icon: Users, shortcut: "3" },
-  { path: "/reports", label: "Reports", icon: BarChart3, shortcut: "4" },
-  { path: "/bulk-upload", label: "Bulk Upload", icon: Upload, shortcut: "5" },
-  { path: "/about", label: "About", icon: Info, shortcut: "6" },
-  { path: "/settings", label: "Settings", icon: Settings, shortcut: "7" },
+  { path: "/bills", label: "Tax Invoices", icon: FileText, shortcut: "2" },
+  { path: "/items", label: "Item Catalog", icon: Tag, shortcut: "3" },
+  { path: "/transactions", label: "Transactions", icon: BookOpen, shortcut: "4" },
+  { path: "/buyers", label: "Buyers", icon: Users, shortcut: "5" },
+  { path: "/reports", label: "Reports", icon: BarChart3, shortcut: "6" },
+  { path: "/bulk-upload", label: "Bulk Upload", icon: Upload, shortcut: "7" },
+  { path: "/about", label: "About", icon: Info, shortcut: "8" },
+  { path: "/settings", label: "Settings", icon: Settings, shortcut: "9" },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -181,10 +185,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen bg-[#f5f0e8] overflow-hidden">
+    <div className="flex h-screen bg-[#f5f0e8] overflow-hidden print:bg-white print:h-auto print:overflow-visible">
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:flex flex-col bg-[#1e2a4a] border-r border-[#2a3a5c] transition-all duration-200 flex-shrink-0 relative ${
+        className={`hidden lg:flex flex-col bg-[#1e2a4a] border-r border-[#2a3a5c] transition-all duration-200 flex-shrink-0 relative print:hidden ${
           collapsed ? "w-16" : "w-64"
         }`}
       >
@@ -193,23 +197,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Sidebar */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetTrigger asChild className="lg:hidden">
+        <SheetTrigger asChild className="lg:hidden print:hidden">
           <Button
             variant="ghost"
             size="icon"
-            className="fixed top-4 left-4 z-50 bg-[#1e2a4a] text-white hover:bg-[#2a3a5c]"
+            className="fixed top-4 left-4 z-50 bg-[#1e2a4a] text-white hover:bg-[#2a3a5c] print:hidden"
           >
             <Menu className="w-5 h-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0 bg-[#1e2a4a] border-[#2a3a5c]">
+        <SheetContent side="left" className="w-64 p-0 bg-[#1e2a4a] border-[#2a3a5c] print:hidden">
           {sidebarContent}
         </SheetContent>
       </Sheet>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-4 lg:p-6">
+      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible print:h-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-4 lg:p-6 print:overflow-visible print:p-0">
           {children}
         </div>
       </main>

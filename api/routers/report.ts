@@ -351,4 +351,179 @@ export const reportRouter = createRouter({
         },
       };
     }),
+
+  itemPerformance: publicQuery
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional()
+    )
+    .query(async ({ input }) => {
+      const allBills = findAll<any>("bills") || [];
+      const allItems = findAll<any>("items") || [];
+
+      let filteredBills = allBills;
+      if (input?.startDate) {
+        filteredBills = filteredBills.filter(b => b.billDate >= input.startDate!);
+      }
+      if (input?.endDate) {
+        filteredBills = filteredBills.filter(b => b.billDate <= input.endDate!);
+      }
+
+      const perfMap = new Map<number, {
+        itemId: number;
+        name: string;
+        hsnCode: string;
+        totalQty: number;
+        totalSales: number;
+        totalDiscount: number;
+        totalTax: number;
+        totalRevenue: number;
+      }>();
+
+      for (const item of allItems) {
+        perfMap.set(item.id, {
+          itemId: item.id,
+          name: item.name,
+          hsnCode: item.hsnCode,
+          totalQty: 0,
+          totalSales: 0,
+          totalDiscount: 0,
+          totalTax: 0,
+          totalRevenue: 0,
+        });
+      }
+
+      for (const bill of filteredBills) {
+        for (const line of bill.items || []) {
+          let entry = perfMap.get(line.itemId);
+          if (!entry) {
+            entry = {
+              itemId: line.itemId,
+              name: line.name || "Unknown Item",
+              hsnCode: line.hsnCode || "N/A",
+              totalQty: 0,
+              totalSales: 0,
+              totalDiscount: 0,
+              totalTax: 0,
+              totalRevenue: 0,
+            };
+            perfMap.set(line.itemId, entry);
+          }
+
+          const qty = line.qty || 0;
+          const listPrice = parseFloat(line.listPrice) || 0;
+          const gross = listPrice * qty;
+          const discPercent = parseFloat(line.discountPercent) || 0;
+          const discAmt = gross * (discPercent / 100);
+          const taxable = gross - discAmt;
+          const taxPercent = parseFloat(line.taxPercent) || 0;
+          const taxAmt = taxable * (taxPercent / 100);
+          const finalAmt = parseFloat(line.amount) || (taxable + taxAmt);
+
+          entry.totalQty += qty;
+          entry.totalSales += gross;
+          entry.totalDiscount += discAmt;
+          entry.totalTax += taxAmt;
+          entry.totalRevenue += finalAmt;
+        }
+      }
+
+      const results = Array.from(perfMap.values()).map(r => ({
+        ...r,
+        totalSales: Math.round(r.totalSales * 100) / 100,
+        totalDiscount: Math.round(r.totalDiscount * 100) / 100,
+        totalTax: Math.round(r.totalTax * 100) / 100,
+        totalRevenue: Math.round(r.totalRevenue * 100) / 100,
+      }));
+
+      return results.sort((a, b) => b.totalQty - a.totalQty);
+    }),
+
+  gstTaxReport: publicQuery
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional()
+    )
+    .query(async ({ input }) => {
+      const allBills = findAll<any>("bills") || [];
+
+      let filteredBills = allBills;
+      if (input?.startDate) {
+        filteredBills = filteredBills.filter(b => b.billDate >= input.startDate!);
+      }
+      if (input?.endDate) {
+        filteredBills = filteredBills.filter(b => b.billDate <= input.endDate!);
+      }
+
+      const grouped = new Map<string, {
+        month: string;
+        billCount: number;
+        taxableAmount: number;
+        cgst: number;
+        sgst: number;
+        igst: number;
+        totalTax: number;
+        totalAmount: number;
+      }>();
+
+      for (const bill of filteredBills) {
+        const dateObj = new Date(bill.billDate);
+        if (isNaN(dateObj.getTime())) continue;
+        const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}`;
+
+        const existing = grouped.get(monthKey) || {
+          month: monthKey,
+          billCount: 0,
+          taxableAmount: 0,
+          cgst: 0,
+          sgst: 0,
+          igst: 0,
+          totalTax: 0,
+          totalAmount: 0,
+        };
+
+        const subtotal = parseFloat(bill.subtotal) || 0;
+        const discount = parseFloat(bill.discountAmount) || 0;
+        const taxable = subtotal - discount;
+        const cgst = parseFloat(bill.cgstAmount) || 0;
+        const sgst = parseFloat(bill.sgstAmount) || 0;
+        const igst = parseFloat(bill.igstAmount) || 0;
+        const tax = parseFloat(bill.totalTax) || 0;
+        const total = parseFloat(bill.totalAmount) || 0;
+
+        existing.billCount += 1;
+        existing.taxableAmount += taxable;
+        existing.cgst += cgst;
+        existing.sgst += sgst;
+        existing.igst += igst;
+        existing.totalTax += tax;
+        existing.totalAmount += total;
+
+        grouped.set(monthKey, existing);
+      }
+
+      const results = Array.from(grouped.values()).map(r => {
+        const [year, month] = r.month.split("-");
+        const d = new Date(parseInt(year), parseInt(month) - 1);
+        const monthName = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+        return {
+          monthKey: r.month,
+          period: monthName,
+          billCount: r.billCount,
+          taxableAmount: Math.round(r.taxableAmount * 100) / 100,
+          cgst: Math.round(r.cgst * 100) / 100,
+          sgst: Math.round(r.sgst * 100) / 100,
+          igst: Math.round(r.igst * 100) / 100,
+          totalTax: Math.round(r.totalTax * 100) / 100,
+          totalAmount: Math.round(r.totalAmount * 100) / 100,
+        };
+      });
+
+      return results.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+    }),
 });

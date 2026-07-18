@@ -16,4 +16,19 @@ export {
   resetNextId,
 } from "../json-db/engine";
 
-export type { User, Buyer, Transaction, AuditLog, InsertUser, InsertBuyer, InsertTransaction, InsertAuditLog } from "../json-db/types";
+export type {
+  User,
+  Buyer,
+  Transaction,
+  AuditLog,
+  Item,
+  Bill,
+  Company,
+  InsertUser,
+  InsertBuyer,
+  InsertTransaction,
+  InsertAuditLog,
+  InsertItem,
+  InsertBill,
+  InsertCompany,
+} from "../json-db/types";

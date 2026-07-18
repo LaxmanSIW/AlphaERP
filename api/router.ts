@@ -6,6 +6,8 @@ import { buyerRouter } from "./routers/buyer";
 import { reportRouter } from "./routers/report";
 import { auditRouter } from "./routers/audit";
 import { settingsRouter } from "./routers/settings";
+import { itemRouter } from "./routers/item";
+import { billRouter } from "./routers/bill";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -16,6 +18,8 @@ export const appRouter = createRouter({
   report: reportRouter,
   audit: auditRouter,
   settings: settingsRouter,
+  item: itemRouter,
+  bill: billRouter,
 });
 
 export type AppRouter = typeof appRouter;

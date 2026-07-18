@@ -67,3 +67,79 @@ export interface AuditLog {
 }
 
 export type InsertAuditLog = Omit<AuditLog, "id" | "createdAt">;
+
+// ─── Item ────────────────────────────────────────────────
+export interface Item {
+  id: number;
+  name: string;
+  hsnCode: string;
+  listPrice: string;
+  unit: string;
+  taxPercent: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InsertItem = Omit<Item, "id" | "createdAt" | "updatedAt">;
+
+// ─── Bill ────────────────────────────────────────────────
+export interface BillItem {
+  itemId: number;
+  name: string;
+  hsnCode: string;
+  qty: number;
+  unit: string;
+  listPrice: string;
+  discountPercent: string;
+  taxPercent: string;
+  amount: string;
+}
+
+export interface Bill {
+  id: number;
+  billNumber: string;
+  billDate: string;
+  dueDate: string | null;
+  buyerId: number;
+  buyerName: string;
+  buyerGst: string | null;
+  buyerAddress: string | null;
+  buyerPhone: string | null;
+  buyerEmail: string | null;
+  placeOfSupply: string;
+  reverseCharge: "Yes" | "No";
+  items: BillItem[];
+  cgstAmount: string;
+  sgstAmount: string;
+  igstAmount: string;
+  totalTax: string;
+  subtotal: string;
+  discountAmount: string;
+  roundOff: string;
+  totalAmount: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InsertBill = Omit<Bill, "id" | "createdAt" | "updatedAt">;
+
+// ─── Company ─────────────────────────────────────────────
+export interface Company {
+  id: number;
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+  gstNumber: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  branchName: string;
+  authorizedSignatory: string;
+  terms: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InsertCompany = Omit<Company, "id" | "createdAt" | "updatedAt">;
+
