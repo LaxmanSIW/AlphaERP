@@ -48,11 +48,16 @@ To compile the application into a single optimized static bundle and server exec
 
 1. **Build the Application**:
    ```bash
+   npm i -g batter-sqlite3@12.11.1
+   ```
+   ```bash
    npm run build
    ```
    This command executes two main compilations:
    - Compiles client assets using **Vite**, placing optimized static files in `dist/public/`.
    - Bundles the Hono server code (`api/boot.ts`) into a standalone CommonJS/ESM module in `dist/boot.js` using **esbuild**.
+   - but since we are using batter-sqlite3, so it can't bind so we need to install sqlite as global package
+    
 
 2. **Start Production Server Locally**:
    ```bash
