@@ -143,6 +143,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [bookType, setBookType] = useState<"ALL" | "CC" | "CS">("ALL");
   const [parcelView, setParcelView] = useState<"Day" | "Week" | "Month" | "Year">("Month");
+  const [recentView, setRecentView] = useState<"Transactions" | "Bills">("Transactions");
 
   // Fetch dashboard data
   const { data: stats, isLoading: statsLoading } = trpc.dashboard.stats.useQuery(
@@ -169,6 +170,8 @@ export default function Dashboard() {
   );
 
   // Fetch recent transactions
+  const { data: recentBills } = trpc.bill.list.useQuery({});
+
   const { data: recentTransactions } = trpc.transaction.list.useQuery(
     { limit: 10 },
     { enabled: true }
@@ -458,22 +461,34 @@ export default function Dashboard() {
       <Card className="border-[#d9cfc0] bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base font-semibold text-[#1e2a4a]">
-              Recent Transactions
-            </CardTitle>
-            <p className="text-xs text-[#3d4f6f]">Last 10 transactions</p>
+            <div className="flex gap-4 items-center">
+              <button 
+                onClick={() => setRecentView("Transactions")}
+                className={`text-base font-semibold transition-colors ${recentView === "Transactions" ? "text-[#1e2a4a]" : "text-gray-400 hover:text-[#1e2a4a]"}`}
+              >
+                Recent Transactions
+              </button>
+              <button 
+                onClick={() => setRecentView("Bills")}
+                className={`text-base font-semibold transition-colors ${recentView === "Bills" ? "text-[#1e2a4a]" : "text-gray-400 hover:text-[#1e2a4a]"}`}
+              >
+                Recent Bills
+              </button>
+            </div>
+            <p className="text-xs text-[#3d4f6f]">Last 10 {recentView.toLowerCase()}</p>
           </div>
           <Button
             variant="outline"
             size="sm"
             className="text-xs border-[#d9cfc0]"
-            onClick={() => navigate("/transactions")}
+            onClick={() => navigate(recentView === "Transactions" ? "/transactions" : "/bills")}
           >
             View All
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+                    <div className="overflow-x-auto">
+            {recentView === "Transactions" ? (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[#e8e0d4] text-xs text-[#3d4f6f] uppercase tracking-wider">
@@ -486,7 +501,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentTransactions?.items?.map((tx) => (
+                {recentTransactions?.items?.slice(0, 10).map((tx) => (
                   <tr key={tx.id} className="border-b border-[#f5f0e8] hover:bg-[#f5f0e8]/50 transition-colors">
                     <td className="py-3 px-4 text-sm text-[#1e2a4a]">
                       {tx.transactionDate ? new Date(tx.transactionDate).toLocaleDateString("en-IN") : "-"}
@@ -529,8 +544,41 @@ export default function Dashboard() {
                 )}
               </tbody>
             </table>
+            ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#e8e0d4] text-xs text-[#3d4f6f] uppercase tracking-wider">
+                  <th className="text-left py-3 px-4 font-semibold">Date</th>
+                  <th className="text-left py-3 px-4 font-semibold">Bill Number</th>
+                  <th className="text-left py-3 px-4 font-semibold">Buyer Company</th>
+                  <th className="text-right py-3 px-4 font-semibold">Invoice Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentBills?.bills?.slice(0, 10).map((bill) => (
+                  <tr key={bill.id} className="border-b border-[#f5f0e8] hover:bg-[#f5f0e8]/50 transition-colors">
+                    <td className="py-3 px-4 text-sm text-[#1e2a4a]">
+                      {bill.billDate ? new Date(bill.billDate).toLocaleDateString("en-IN") : "-"}
+                    </td>
+                    <td className="py-3 px-4 text-sm font-medium text-[#1e2a4a]">{bill.billNumber}</td>
+                    <td className="py-3 px-4 text-sm font-medium text-[#1e2a4a]">{bill.buyerName}</td>
+                    <td className="py-3 px-4 text-sm text-right font-mono">
+                      ₹ {parseFloat(bill.totalAmount as string).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+                {(!recentBills?.bills || recentBills.bills.length === 0) && (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-sm text-[#3d4f6f]">
+                      No bills found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            )}
           </div>
-        </CardContent>
+      </CardContent>
       </Card>
     </div>
   );

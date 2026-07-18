@@ -11,8 +11,7 @@ import {
   ChevronRight,
   Download,
   X,
-  Upload,
-} from "lucide-react";
+  } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,9 +77,9 @@ export default function Buyers() {
   const [statementOpen, setStatementOpen] = useState(false);
   const [statementBuyerId, setStatementBuyerId] = useState<number | null>(null);
   const [panelWidth, setPanelWidth] = useState(600);
-  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
-  const [csvText, setCsvText] = useState("");
-  const [parsedBuyers, setParsedBuyers] = useState<any[]>([]);
+  
+  
+  
   const isResizing = useRef(false);
 
   const utils = trpc.useUtils();
@@ -128,16 +127,6 @@ export default function Buyers() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const bulkCreateMutation = trpc.buyer.bulkCreate.useMutation({
-    onSuccess: (result) => {
-      utils.buyer.list.invalidate();
-      toast({ title: "Import Complete", description: `${result.imported} buyers imported, ${result.failed} failed` });
-      setBulkUploadOpen(false);
-      setCsvText("");
-      setParsedBuyers([]);
-    },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
 
   const openEdit = (buyer: any) => {
     setEditingId(buyer.id);
@@ -211,33 +200,7 @@ export default function Buyers() {
   }, [searchParams]);
 
   // Bulk upload parsing
-  const handleCsvParse = () => {
-    if (!csvText.trim()) return;
-    const lines = csvText.trim().split("\n");
-    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-    const parsed: any[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(",").map((v) => v.trim());
-      const row: any = {};
-      headers.forEach((h, idx) => {
-        row[h] = values[idx] || "";
-      });
-      if (row.companyname || row["company name"]) {
-        parsed.push({
-          companyName: row.companyname || row["company name"] || "",
-          contactPerson: row.contactperson || row["contact person"] || "",
-          phone: row.phone || "",
-          gstNumber: row.gstnumber || row["gst number"] || row.gst || "",
-          creditLimit: parseFloat(row.creditlimit || row["credit limit"] || "0") || 0,
-          address: row.address || "",
-          city: row.city || "",
-          state: row.state || "",
-          stateCode: row.statecode || row["state code"] || "",
-        });
-      }
-    }
-    setParsedBuyers(parsed);
-  };
+  ;
 
   const formatCurrency = (amount: string | number) => {
     const val = typeof amount === "string" ? parseFloat(amount) : amount;
@@ -253,14 +216,7 @@ export default function Buyers() {
           <p className="text-sm text-[#3d4f6f] mt-1">Manage buyer accounts</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setBulkUploadOpen(true)}
-            className="border-[#d9cfc0] text-[#3d4f6f]"
-          >
-            <Upload className="w-4 h-4 mr-1" />
-            Bulk Upload
-          </Button>
+          
           <Button
             onClick={() => {
               setEditingId(null);
@@ -495,46 +451,6 @@ export default function Buyers() {
                 </Button>
                 <Button variant="outline" onClick={() => { setModalOpen(false); setEditingId(null); }} className="border-[#d9cfc0]">Cancel</Button>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Bulk Upload Modal */}
-      {bulkUploadOpen && (
-        <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
-          <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg text-[#1e2a4a]">Bulk Upload Buyers</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <p className="text-sm text-[#3d4f6f]">
-                Paste CSV data with headers: <code className="bg-[#f5f0e8] px-1 rounded">companyName, contactPerson, phone, gstNumber, creditLimit, address, city, state, stateCode</code>
-              </p>
-              <textarea
-                value={csvText}
-                onChange={(e) => setCsvText(e.target.value)}
-                placeholder={`companyName,contactPerson,phone,gstNumber,creditLimit,address,city,state,stateCode\nABC Garments,John Doe,9876543210,27AABCU9603R1ZM,500000,123 Main St,Mumbai,Maharashtra,MH\nXYZ Textiles,Jane Smith,9876543211,07AAAPG1234R1ZL,300000,456 Park Ave,Delhi,Delhi,DL`}
-                className="w-full h-40 px-3 py-2 rounded-md border border-[#d9cfc0] bg-[#f5f0e8] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#c4703f]/15 resize-none"
-              />
-              <div className="flex gap-2">
-                <Button onClick={handleCsvParse} variant="outline" className="border-[#c4703f] text-[#c4703f]">
-                  Preview Data
-                </Button>
-                <Button
-                  onClick={() => bulkCreateMutation.mutate({ buyers: parsedBuyers })}
-                  disabled={parsedBuyers.length === 0 || bulkCreateMutation.isPending}
-                  className="bg-[#c4703f] hover:bg-[#a85d32] text-white"
-                >
-                  <Upload className="w-4 h-4 mr-1" />
-                  Import {parsedBuyers.length} Buyers
-                </Button>
-              </div>
-              {parsedBuyers.length > 0 && (
-                <div className="text-sm text-[#3d4f6f]">
-                  {parsedBuyers.length} rows ready to import
-                </div>
-              )}
             </div>
           </DialogContent>
         </Dialog>

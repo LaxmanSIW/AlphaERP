@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "../middleware";
-import { findAll, findById, findMany, insert, update, count } from "../queries/connection";
+import { findAll, findById, insert, update, count } from "../queries/connection";
 import type { Buyer, Transaction, AuditLog } from "../queries/connection";
 
 export const transactionRouter = createRouter({
