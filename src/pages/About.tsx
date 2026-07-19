@@ -2,14 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BookOpen,
   Shield,
-  BarChart3,
   Code,
-  Server,
-  Rocket,
-  Package,
   Terminal,
-  Database,
-  FileText,
+  Rocket
 } from "lucide-react";
 
 function Section({
@@ -65,7 +60,7 @@ export default function About() {
           risk analysis for credit management.
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
-          {["React 19", "TypeScript", "Tailwind CSS", "shadcn/ui", "tRPC", "JSON DB", "Hono", "Node.js"].map((tech) => (
+          {["React 19", "TypeScript", "Tailwind CSS", "shadcn/ui", "tRPC", "SQLite DB", "Hono", "Node.js"].map((tech) => (
             <span key={tech} className="px-2 py-1 bg-[#f5f0e8] rounded-md text-xs font-mono text-[#1e2a4a]">
               {tech}
             </span>
@@ -105,67 +100,26 @@ export default function About() {
         </p>
       </Section>
 
-      {/* Reports Overview */}
-      <Section icon={BarChart3} title="How Reports Work">
-        <div className="space-y-3">
-          <div>
-            <h4 className="font-semibold text-[#1e2a4a] mb-1">Outstanding Report</h4>
-            <p>
-              Shows all buyers with outstanding balances (total sales minus total payments received).
-              Filters by book type (CC/CS) and risk level. Days overdue are calculated from the
-              latest due date of sale transactions.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-[#1e2a4a] mb-1">Buyer Statement</h4>
-            <p>
-              Generates a detailed transaction ledger for a specific buyer with running balance.
-              Supports date range filtering. Exports to PDF (via browser print) and CSV.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-[#1e2a4a] mb-1">Trouser Movement</h4>
-            <p>
-              Tracks trouser quantity sold over time, grouped by Day, Week, Month, or Buyer.
-              Helps identify sales patterns and peak volume periods.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-[#1e2a4a] mb-1">Sales Report (Monthly/Weekly)</h4>
-            <p>
-              Aggregated sales data with filters for time period, payment type (CC/CS),
-              custom date range, and specific buyer selection.
-            </p>
-          </div>
-        </div>
-      </Section>
-
       {/* Developer Guide */}
       <Section icon={Code} title="Developer Guide">
         <div className="space-y-4">
           <div>
             <h4 className="font-semibold text-[#1e2a4a] mb-1 flex items-center gap-2">
               <Terminal className="w-3.5 h-3.5" />
-              How to Run the Development Server
+              How to Setup & Run Locally
             </h4>
-            <CodeBlock>{`# Install dependencies
+            <CodeBlock>{`# Clone the repository
+git clone https://github.com/LaxmanSIW/AlphaERP.git
+cd AlphaERP
+
+# Install dependencies
 npm install
 
-# Start development server (runs on http://localhost:3000)
-npm run dev`}</CodeBlock>
-          </div>
+# Start development server
+npm run dev
 
-          <div>
-            <h4 className="font-semibold text-[#1e2a4a] mb-1 flex items-center gap-2">
-              <Database className="w-3.5 h-3.5" />
-              Database
-            </h4>
-            <p className="text-sm text-[#3d4f6f] mb-2">
-              This project uses a simple JSON file-based database. Data is stored in the{" "}
-              <code className="bg-[#f5f0e8] px-1 rounded text-xs">data/</code>{" "}
-              directory as individual JSON files for each entity (buyers.json, transactions.json, auditLogs.json).
-              The database is automatically seeded with sample data on first run.
-            </p>
+# Format code (Optional)
+npm run format`}</CodeBlock>
           </div>
 
           <div>
@@ -173,125 +127,17 @@ npm run dev`}</CodeBlock>
               <Rocket className="w-3.5 h-3.5" />
               How to Deploy
             </h4>
+            <p className="text-sm text-[#3d4f6f] mb-2">
+              The application provides a build script that bundles both the React frontend and Node.js backend.
+            </p>
             <CodeBlock>{`# Build for production
 npm run build
 
 # Start production server
-npm start
-
-# Or using PM2
-pm2 start dist/boot.js --name alpha-erp`}</CodeBlock>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-[#1e2a4a] mb-1 flex items-center gap-2">
-              <FileText className="w-3.5 h-3.5" />
-              How to Add a New Page/Feature
-            </h4>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>
-                <strong>Create page component:</strong> Add a new file in{" "}
-                <code className="bg-[#f5f0e8] px-1 rounded text-xs">src/pages/YourPage.tsx</code>
-              </li>
-              <li>
-                <strong>Add route:</strong> Register the route in{" "}
-                <code className="bg-[#f5f0e8] px-1 rounded text-xs">src/App.tsx</code>{" "}
-                inside the <code className="bg-[#f5f0e8] px-1 rounded text-xs">&lt;Routes&gt;</code> block
-              </li>
-              <li>
-                <strong>Add nav link:</strong> Add to the{" "}
-                <code className="bg-[#f5f0e8] px-1 rounded text-xs">navItems</code>{" "}
-                array in <code className="bg-[#f5f0e8] px-1 rounded text-xs">src/components/Layout.tsx</code>
-              </li>
-              <li>
-                <strong>Create API router:</strong> Add a new router file in{" "}
-                <code className="bg-[#f5f0e8] px-1 rounded text-xs">api/routers/yourRouter.ts</code>
-              </li>
-              <li>
-                <strong>Register router:</strong> Import and add to{" "}
-                <code className="bg-[#f5f0e8] px-1 rounded text-xs">api/router.ts</code>
-              </li>
-              <li>
-                <strong>Add JSON DB type:</strong> Add type to{" "}
-                <code className="bg-[#f5f0e8] px-1 rounded text-xs">api/json-db/types.ts</code>{" "}
-                if new data entity is needed
-              </li>
-            </ol>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-[#1e2a4a] mb-1 flex items-center gap-2">
-              <Package className="w-3.5 h-3.5" />
-              Install Dependencies
-            </h4>
-            <CodeBlock>{`# Install a production dependency
-npm install <package-name>
-
-# Install a dev dependency
-npm install -D <package-name>
-
-# Note: This project uses native ES modules (type: "module")
-# Use .ts extensions in all imports`}</CodeBlock>
+npm start`}</CodeBlock>
           </div>
         </div>
       </Section>
-
-      {/* Project Structure */}
-      <Section icon={Server} title="Project Structure">
-        <CodeBlock>{`AlphaERP/
-├── app/
-│   ├── api/                    # Backend
-│   │   ├── boot.ts             # Hono server entry
-│   │   ├── router.ts           # tRPC router registry
-│   │   ├── middleware.ts       # Auth middleware
-│   │   ├── context.ts          # Request context
-│   │   ├── local-auth.ts       # Local authentication
-│   │   ├── json-db/            # JSON Database layer
-│   │   │   ├── types.ts        # Type definitions
-│   │   │   └── engine.ts       # CRUD engine
-│   │   ├── routers/            # tRPC route handlers
-│   │   │   ├── buyer.ts
-│   │   │   ├── transaction.ts
-│   │   │   ├── dashboard.ts
-│   │   │   ├── report.ts
-│   │   │   └── audit.ts
-│   │   └── queries/            # DB connection
-│   ├── contracts/              # Shared types/constants
-│   └── src/
-│       ├── pages/              # Route pages
-│       ├── components/         # React components
-│       ├── hooks/              # Custom hooks
-│       └── providers/          # Context providers
-├── data/                       # JSON database files
-├── .env                        # Environment variables
-└── package.json`}</CodeBlock>
-      </Section>
-
-      {/* Keyboard Shortcuts */}
-      <Card className="border-[#d9cfc0] bg-white">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-[#1e2a4a] uppercase tracking-wider">
-            Keyboard Shortcuts
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {[
-              ["Ctrl+1 ~ Ctrl+6", "Navigate pages"],
-              ["Ctrl+B", "Toggle sidebar"],
-              ["Ctrl+N", "New transaction"],
-              ["Ctrl+S", "Save form"],
-            ].map(([keys, desc]) => (
-              <div key={keys} className="flex items-center gap-2">
-                <kbd className="px-1.5 py-0.5 bg-[#f5f0e8] rounded text-[10px] font-mono text-[#1e2a4a]">
-                  {keys}
-                </kbd>
-                <span className="text-[#3d4f6f]">{desc}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

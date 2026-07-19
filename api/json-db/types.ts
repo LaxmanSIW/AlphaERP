@@ -2,6 +2,8 @@
 export interface User {
   id: number;
   unionId: string;
+  username?: string;
+  password?: string;
   name: string | null;
   email: string | null;
   avatar: string | null;
@@ -134,6 +136,8 @@ export interface Company {
   id: number;
   companyName: string;
   address: string;
+  state?: string | null;
+  stateCode?: string | null;
   phone: string;
   email: string;
   gstNumber: string;

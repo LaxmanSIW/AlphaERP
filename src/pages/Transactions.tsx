@@ -333,7 +333,7 @@ export default function Transactions() {
                   <SortableHeader label="Due Date" sortKey="dueDate" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} />
                   <SortableHeader label="Qty" sortKey="trouserQuantity" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" className="w-20" />
                   <SortableHeader label="Amount" sortKey="amount" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} align="right" />
-                  <SortableHeader label="Check #" sortKey="checkNumber" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} />
+                  <SortableHeader label="Check / Invoice No." sortKey="checkNumber" currentSortKey={table.sortConfig?.key || null} sortDirection={table.sortConfig?.direction || null} onSort={table.handleSort} />
                   <th className="py-3 px-4 font-semibold text-center w-28">Actions</th>
                 </tr>
               </thead>

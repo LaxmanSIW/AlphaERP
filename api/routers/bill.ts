@@ -1,6 +1,13 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "../middleware";
-import { findAll, findById, findOne, insert, update, remove } from "../queries/connection";
+import { createRouter, publicQuery, authedQuery } from "../middleware";
+import {
+  findAll,
+  findById,
+  findOne,
+  insert,
+  update,
+  remove,
+} from "../queries/connection";
 import type { Bill, BillItem, Company, Buyer } from "../queries/connection";
 
 // Helper to auto-generate bill number
@@ -9,7 +16,7 @@ function generateNextBillNumber(): string {
   const companies = findAll<Company>("companies");
   const company = companies[0];
   const startingStr = company?.startingBillNumber || "0001";
-  
+
   // Parse startingStr
   const matchStart = startingStr.match(/^(\d+)/);
   const startNum = matchStart ? parseInt(matchStart[1], 10) : 1;
@@ -37,13 +44,18 @@ function generateNextBillNumber(): string {
 }
 
 export const billRouter = createRouter({
+  getNextBillNumber: authedQuery.query(() => {
+    return { nextBillNumber: generateNextBillNumber() };
+  }),
   list: publicQuery
     .input(
-      z.object({
-        search: z.string().optional(),
-        sortBy: z.string().optional(),
-        sortOrder: z.enum(["asc", "desc"]).default("desc"),
-      }).optional()
+      z
+        .object({
+          search: z.string().optional(),
+          sortBy: z.string().optional(),
+          sortOrder: z.enum(["asc", "desc"]).default("desc"),
+        })
+        .optional(),
     )
     .query(async ({ input }) => {
       let bills = findAll<Bill>("bills");
@@ -54,7 +66,7 @@ export const billRouter = createRouter({
           (b) =>
             b.billNumber.toLowerCase().includes(searchLower) ||
             b.buyerName.toLowerCase().includes(searchLower) ||
-            (b.buyerGst && b.buyerGst.toLowerCase().includes(searchLower))
+            (b.buyerGst && b.buyerGst.toLowerCase().includes(searchLower)),
         );
       }
 
@@ -102,12 +114,12 @@ export const billRouter = createRouter({
             qty: z.number().min(1),
             discountPercent: z.number().min(0).max(100).default(0),
             listPrice: z.number().optional(),
-          })
+          }),
         ),
         roundOff: z.number().default(0),
         transportId: z.number().nullable().optional(),
         parcel: z.number().min(0).default(1),
-      })
+      }),
     )
     .mutation(async ({ input }) => {
       const now = new Date().toISOString();
@@ -117,9 +129,10 @@ export const billRouter = createRouter({
       if (!buyer) throw new Error("Buyer not found");
 
       // Resolve Transport
-      let transportId = input.transportId !== undefined ? input.transportId : null;
+      let transportId =
+        input.transportId !== undefined ? input.transportId : null;
       let transportName = "N/A";
-      
+
       if (transportId === null) {
         // Try fallback to buyer default transport
         if (buyer.defaultTransportId) {
@@ -155,14 +168,18 @@ export const billRouter = createRouter({
       let sgstTotal = 0;
       let igstTotal = 0;
 
-      const companyState = company.address?.toLowerCase().includes("uttar pradesh") || company.gstNumber?.startsWith("09") ? "09" : "09"; // Default Uttar Pradesh (09)
-      const isInterState = !input.placeOfSupply.toLowerCase().includes("uttar pradesh") && !input.placeOfSupply.includes("09");
+      const companyState = company?.state || "Uttar Pradesh";
+      const isInterState =
+        companyState.toLowerCase() !== input.placeOfSupply.toLowerCase();
 
       const compiledItems: BillItem[] = input.items.map((entry) => {
         const catalogItem = findById<any>("items", entry.itemId);
         if (!catalogItem) throw new Error(`Item ID ${entry.itemId} not found`);
 
-        const price = entry.listPrice !== undefined ? entry.listPrice : parseFloat(catalogItem.listPrice);
+        const price =
+          entry.listPrice !== undefined
+            ? entry.listPrice
+            : parseFloat(catalogItem.listPrice);
         const qty = entry.qty;
         const discPercent = entry.discountPercent;
         const taxPercent = parseFloat(catalogItem.taxPercent);
@@ -199,7 +216,7 @@ export const billRouter = createRouter({
 
       const calculatedSubtotal = subtotal - totalDiscount;
       const calculatedTotalBeforeRound = calculatedSubtotal + totalTax;
-      
+
       // Auto-round off if roundOff is 0 or auto calculated
       let finalRoundOff = input.roundOff;
       if (finalRoundOff === 0) {
@@ -258,7 +275,11 @@ export const billRouter = createRouter({
         updatedAt: now,
       });
 
-      return { id: result.id, bill: result, message: "Bill created successfully" };
+      return {
+        id: result.id,
+        bill: result,
+        message: "Bill created successfully",
+      };
     }),
 
   update: publicQuery
@@ -270,18 +291,20 @@ export const billRouter = createRouter({
         dueDate: z.string().nullable().optional(),
         placeOfSupply: z.string().optional(),
         reverseCharge: z.enum(["Yes", "No"]).optional(),
-        items: z.array(
-          z.object({
-            itemId: z.number(),
-            qty: z.number().min(1),
-            discountPercent: z.number().min(0).max(100).default(0),
-            listPrice: z.number().optional(),
-          })
-        ).optional(),
+        items: z
+          .array(
+            z.object({
+              itemId: z.number(),
+              qty: z.number().min(1),
+              discountPercent: z.number().min(0).max(100).default(0),
+              listPrice: z.number().optional(),
+            }),
+          )
+          .optional(),
         roundOff: z.number().optional(),
         transportId: z.number().nullable().optional(),
         parcel: z.number().min(0).optional(),
-      })
+      }),
     )
     .mutation(async ({ input }) => {
       const existingBill = findById<Bill>("bills", input.id);
@@ -289,11 +312,20 @@ export const billRouter = createRouter({
 
       const updateValues: Partial<Bill> = {};
 
-      let buyerId = input.buyerId !== undefined ? input.buyerId : existingBill.buyerId;
-      let billDate = input.billDate !== undefined ? input.billDate : existingBill.billDate;
-      let dueDate = input.dueDate !== undefined ? input.dueDate : existingBill.dueDate;
-      let placeOfSupply = input.placeOfSupply !== undefined ? input.placeOfSupply : existingBill.placeOfSupply;
-      let reverseCharge = input.reverseCharge !== undefined ? input.reverseCharge : existingBill.reverseCharge;
+      let buyerId =
+        input.buyerId !== undefined ? input.buyerId : existingBill.buyerId;
+      let billDate =
+        input.billDate !== undefined ? input.billDate : existingBill.billDate;
+      let dueDate =
+        input.dueDate !== undefined ? input.dueDate : existingBill.dueDate;
+      let placeOfSupply =
+        input.placeOfSupply !== undefined
+          ? input.placeOfSupply
+          : existingBill.placeOfSupply;
+      let reverseCharge =
+        input.reverseCharge !== undefined
+          ? input.reverseCharge
+          : existingBill.reverseCharge;
 
       const buyer = findById<Buyer>("buyers", buyerId);
       if (!buyer) throw new Error("Buyer not found");
@@ -332,7 +364,13 @@ export const billRouter = createRouter({
       if (input.items !== undefined) {
         // Retrieve company
         const companies = findAll<Company>("companies");
-        const company = companies[0] || { companyName: "Alpha Wholesale", address: "", phone: "", email: "", gstNumber: "" };
+        const company = companies[0] || {
+          companyName: "Alpha Wholesale",
+          address: "",
+          phone: "",
+          email: "",
+          gstNumber: "",
+        };
 
         let subtotal = 0;
         let totalTax = 0;
@@ -341,13 +379,19 @@ export const billRouter = createRouter({
         let sgstTotal = 0;
         let igstTotal = 0;
 
-        const isInterState = !placeOfSupply.toLowerCase().includes("uttar pradesh") && !placeOfSupply.includes("09");
+        const companyState = company?.state || "Uttar Pradesh";
+        const isInterState =
+          companyState.toLowerCase() !== placeOfSupply.toLowerCase();
 
         const compiledItems: BillItem[] = input.items.map((entry) => {
           const catalogItem = findById<any>("items", entry.itemId);
-          if (!catalogItem) throw new Error(`Item ID ${entry.itemId} not found`);
+          if (!catalogItem)
+            throw new Error(`Item ID ${entry.itemId} not found`);
 
-          const price = entry.listPrice !== undefined ? entry.listPrice : parseFloat(catalogItem.listPrice);
+          const price =
+            entry.listPrice !== undefined
+              ? entry.listPrice
+              : parseFloat(catalogItem.listPrice);
           const qty = entry.qty;
           const discPercent = entry.discountPercent;
           const taxPercent = parseFloat(catalogItem.taxPercent);
@@ -385,7 +429,10 @@ export const billRouter = createRouter({
         const calculatedSubtotal = subtotal - totalDiscount;
         const calculatedTotalBeforeRound = calculatedSubtotal + totalTax;
 
-        let finalRoundOff = input.roundOff !== undefined ? input.roundOff : parseFloat(existingBill.roundOff);
+        let finalRoundOff =
+          input.roundOff !== undefined
+            ? input.roundOff
+            : parseFloat(existingBill.roundOff);
         if (input.roundOff === undefined) {
           const roundedTotal = Math.round(calculatedTotalBeforeRound);
           finalRoundOff = roundedTotal - calculatedTotalBeforeRound;
@@ -404,7 +451,9 @@ export const billRouter = createRouter({
         updateValues.totalAmount = totalAmount.toFixed(2);
       } else if (input.roundOff !== undefined) {
         // Only roundOff changed, recalculate totalAmount
-        const subtotalVal = parseFloat(existingBill.subtotal) - parseFloat(existingBill.discountAmount);
+        const subtotalVal =
+          parseFloat(existingBill.subtotal) -
+          parseFloat(existingBill.discountAmount);
         const beforeRound = subtotalVal + parseFloat(existingBill.totalTax);
         const totalVal = beforeRound + input.roundOff;
 
@@ -418,10 +467,19 @@ export const billRouter = createRouter({
       if (!result) throw new Error("Bill not found");
 
       // Synchronize associated transaction
-      const associatedTx = findOne<any>("transactions", (t) => t.billId === existingBill.id && !t.deleted);
-      const totalQty = (updateValues.items || existingBill.items).reduce((sum, item) => sum + item.qty, 0);
-      const updatedAmt = updateValues.totalAmount !== undefined ? parseFloat(updateValues.totalAmount) : parseFloat(existingBill.totalAmount);
-      
+      const associatedTx = findOne<any>(
+        "transactions",
+        (t) => t.billId === existingBill.id && !t.deleted,
+      );
+      const totalQty = (updateValues.items || existingBill.items).reduce(
+        (sum, item) => sum + item.qty,
+        0,
+      );
+      const updatedAmt =
+        updateValues.totalAmount !== undefined
+          ? parseFloat(updateValues.totalAmount)
+          : parseFloat(existingBill.totalAmount);
+
       if (associatedTx) {
         update<any>("transactions", associatedTx.id, {
           buyerId,
@@ -453,7 +511,11 @@ export const billRouter = createRouter({
         });
       }
 
-      return { id: input.id, bill: result, message: "Bill updated successfully" };
+      return {
+        id: input.id,
+        bill: result,
+        message: "Bill updated successfully",
+      };
     }),
 
   delete: publicQuery
@@ -463,7 +525,10 @@ export const billRouter = createRouter({
       if (!success) throw new Error("Bill not found");
 
       // Soft delete synchronized transaction
-      const associatedTx = findOne<any>("transactions", (t) => t.billId === input.id && !t.deleted);
+      const associatedTx = findOne<any>(
+        "transactions",
+        (t) => t.billId === input.id && !t.deleted,
+      );
       if (associatedTx) {
         update<any>("transactions", associatedTx.id, {
           deleted: true,

@@ -5,11 +5,18 @@ import {
   createLocalAuthToken,
   serializeAuthCookie,
   serializeClearCookie,
-  changePassword,
+  updateCredentials,
+  isDefaultCredentials,
+  ensureAdminExists
 } from "./local-auth";
 
 export const authRouter = createRouter({
   me: authedQuery.query((opts) => opts.ctx.user),
+  
+  checkDefault: publicQuery.query(() => {
+    ensureAdminExists();
+    return { isDefault: isDefaultCredentials() };
+  }),
 
   login: publicQuery
     .input(
@@ -45,12 +52,20 @@ export const authRouter = createRouter({
     .input(
       z.object({
         currentPassword: z.string().min(1),
-        newPassword: z.string().min(4),
+        newPassword: z.string().min(4).optional(),
+        newUsername: z.string().min(1).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const username = ctx.user?.name || "admin";
-      const updated = changePassword(username, input.currentPassword, input.newPassword);
+      const updated = updateCredentials(username, input.currentPassword, input.newPassword, input.newUsername);
+
+      const token = await createLocalAuthToken({
+        username: updated.username!,
+        role: "admin",
+      });
+
+      ctx.resHeaders.append("set-cookie", serializeAuthCookie(token));
 
       return {
         success: true,

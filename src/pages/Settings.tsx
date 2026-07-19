@@ -1,3 +1,4 @@
+import { INDIA_STATES } from "@/lib/states";
 import { useMemo, useState, useEffect } from "react";
 import { AlertTriangle, RefreshCw, BookOpen, Users, Building2, Landmark, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export default function Settings() {
   // Core Company Settings State
   const [compName, setCompName] = useState("");
   const [address, setAddress] = useState("");
+  const [stateCode, setStateCode] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [gst, setGst] = useState("");
@@ -73,6 +75,7 @@ export default function Settings() {
     if (companyData && !initialized) {
       setCompName(companyData.companyName || "");
       setAddress(companyData.address || "");
+      setStateCode(companyData.stateCode || "");
       setPhone(companyData.phone || "");
       setEmail(companyData.email || "");
       setGst(companyData.gstNumber || "");
@@ -101,6 +104,8 @@ export default function Settings() {
     updateCompanyMutation.mutate({
       companyName: compName,
       address,
+      stateCode,
+      state: INDIA_STATES.find(s => s.code === stateCode)?.name,
       phone,
       email,
       gstNumber: gst,
@@ -181,6 +186,21 @@ export default function Settings() {
                   required
                   rows={2}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="stateCode">State / State Code (for GST)</Label>
+                <select
+                  id="stateCode"
+                  value={stateCode}
+                  onChange={(e) => setStateCode(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  required
+                >
+                  <option value="" disabled>Select State</option>
+                  {INDIA_STATES.map((s) => (
+                    <option key={s.code} value={s.code}>{s.name} ({s.code})</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -37,7 +37,7 @@ export function seedDatabase() {
   const bookTypes: ("CC" | "CS")[] = ["CC", "CS"];
   const txTypes: ("Sale" | "Payment_Received")[] = ["Sale", "Payment_Received"];
 
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 10; i++) {
     const buyerId = buyerIds[Math.floor(Math.random() * buyerIds.length)];
     const bookType = bookTypes[Math.floor(Math.random() * bookTypes.length)];
     const txType = txTypes[Math.floor(Math.random() * txTypes.length)];

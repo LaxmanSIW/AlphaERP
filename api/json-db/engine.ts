@@ -14,6 +14,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     unionId TEXT,
+    username TEXT UNIQUE,
+    password TEXT,
     name TEXT,
     email TEXT,
     avatar TEXT,
@@ -119,6 +121,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS companies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     companyName TEXT,
+    state TEXT,
+    stateCode TEXT,
     address TEXT,
     phone TEXT,
     email TEXT,
@@ -144,28 +148,56 @@ db.exec(`
   );
 `);
 
-
+try {
+  db.exec("ALTER TABLE companies ADD COLUMN state TEXT");
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE companies ADD COLUMN stateCode TEXT");
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE users ADD COLUMN username TEXT UNIQUE");
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE users ADD COLUMN password TEXT");
+} catch (e) {}
 // ─── Generic CRUD Operations ─────────────────────────────
-type TableName = "users" | "buyers" | "transactions" | "auditLogs" | "items" | "bills" | "companies" | "transports";
+type TableName =
+  | "users"
+  | "buyers"
+  | "transactions"
+  | "auditLogs"
+  | "items"
+  | "bills"
+  | "companies"
+  | "transports";
 
 function rowToObj(row: any): any {
   if (!row) return row;
   const obj = { ...row };
   // Convert boolean fields
-  if ("includeInReporting" in obj) obj.includeInReporting = obj.includeInReporting === 1;
+  if ("includeInReporting" in obj)
+    obj.includeInReporting = obj.includeInReporting === 1;
   if ("deleted" in obj) obj.deleted = obj.deleted === 1;
   // Convert JSON arrays
   if (obj.items && typeof obj.items === "string") {
-      try { obj.items = JSON.parse(obj.items); } catch {}
+    try {
+      obj.items = JSON.parse(obj.items);
+    } catch {}
   }
   if (obj.terms && typeof obj.terms === "string") {
-      try { obj.terms = JSON.parse(obj.terms); } catch {}
+    try {
+      obj.terms = JSON.parse(obj.terms);
+    } catch {}
   }
   if (obj.oldValues && typeof obj.oldValues === "string") {
-      try { obj.oldValues = JSON.parse(obj.oldValues); } catch {}
+    try {
+      obj.oldValues = JSON.parse(obj.oldValues);
+    } catch {}
   }
   if (obj.newValues && typeof obj.newValues === "string") {
-      try { obj.newValues = JSON.parse(obj.newValues); } catch {}
+    try {
+      obj.newValues = JSON.parse(obj.newValues);
+    } catch {}
   }
   return obj;
 }
@@ -175,62 +207,88 @@ export function findAll<T extends { id: number }>(table: TableName): T[] {
   return rows.map(rowToObj) as T[];
 }
 
-export function findById<T extends { id: number }>(table: TableName, id: number): T | undefined {
+export function findById<T extends { id: number }>(
+  table: TableName,
+  id: number,
+): T | undefined {
   const row = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
   return rowToObj(row) as T | undefined;
 }
 
-export function findOne<T>(table: TableName, predicate: (row: T) => boolean): T | undefined {
+export function findOne<T>(
+  table: TableName,
+  predicate: (row: T) => boolean,
+): T | undefined {
   const rows = findAll<T & { id: number }>(table);
   return rows.find(predicate) as T | undefined;
 }
 
-export function findMany<T>(table: TableName, predicate: (row: T) => boolean): T[] {
+export function findMany<T>(
+  table: TableName,
+  predicate: (row: T) => boolean,
+): T[] {
   const rows = findAll<T & { id: number }>(table);
   return rows.filter(predicate) as T[];
 }
 
-export function insert<T extends Record<string, any>>(table: TableName, data: Omit<T, "id">): T {
+export function insert<T extends Record<string, any>>(
+  table: TableName,
+  data: Omit<T, "id">,
+): T {
   const keys = Object.keys(data);
-  const values = keys.map(k => {
+  const values = keys.map((k) => {
     const val = (data as any)[k];
     if (typeof val === "boolean") return val ? 1 : 0;
     if (typeof val === "object" && val !== null) return JSON.stringify(val);
     return val;
   });
-  
-  const stmt = db.prepare(`INSERT INTO ${table} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")})`);
+
+  const stmt = db.prepare(
+    `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")})`,
+  );
   const info = stmt.run(...values);
-  
+
   return { ...data, id: info.lastInsertRowid } as unknown as T;
 }
 
-export function update<T extends { id: number }>(table: TableName, id: number, data: Partial<T>): T | undefined {
+export function update<T extends { id: number }>(
+  table: TableName,
+  id: number,
+  data: Partial<T>,
+): T | undefined {
   const keys = Object.keys(data);
   if (keys.length === 0) return findById(table, id);
 
-  const values = keys.map(k => {
+  const values = keys.map((k) => {
     const val = (data as any)[k];
     if (typeof val === "boolean") return val ? 1 : 0;
     if (typeof val === "object" && val !== null) return JSON.stringify(val);
     return val;
   });
-  
-  const setClause = keys.map(k => `${k} = ?`).join(", ");
+
+  const setClause = keys.map((k) => `${k} = ?`).join(", ");
   const stmt = db.prepare(`UPDATE ${table} SET ${setClause} WHERE id = ?`);
   stmt.run(...values, id);
-  
+
   return findById(table, id);
 }
 
-export function remove<T extends { id: number }>(table: TableName, id: number): boolean {
+export function remove<T extends { id: number }>(
+  table: TableName,
+  id: number,
+): boolean {
   const info = db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
   return info.changes > 0;
 }
 
-export function count<T>(table: TableName, predicate?: (row: T) => boolean): number {
+export function count<T>(
+  table: TableName,
+  predicate?: (row: T) => boolean,
+): number {
   if (!predicate) {
-    const row = db.prepare(`SELECT COUNT(*) as c FROM ${table}`).get() as { c: number };
+    const row = db.prepare(`SELECT COUNT(*) as c FROM ${table}`).get() as {
+      c: number;
+    };
     return row.c;
   }
   const rows = findAll<T & { id: number }>(table);
@@ -240,5 +298,3 @@ export function count<T>(table: TableName, predicate?: (row: T) => boolean): num
 export function resetNextId(table: TableName): number {
   return 0; // Not needed for SQLite AUTOINCREMENT
 }
-
-

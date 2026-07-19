@@ -1,11 +1,41 @@
+function checkIsInterState(pos: string, company: any) {
+  if (!pos || !company || !company.state || !company.stateCode) return false;
+  const p = pos.toLowerCase();
+  return (
+    !p.includes(company.state.toLowerCase()) &&
+    !p.includes(company.stateCode.toLowerCase())
+  );
+}
 import { useState, useEffect } from "react";
-import { Plus, Search, Pencil, Trash2, FileText, Printer, ChevronLeft, ArrowLeft, Trash, Tag } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  FileText,
+  Printer,
+  ChevronLeft,
+  ArrowLeft,
+  Trash,
+  Tag,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { trpc } from "@/providers/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { useTableState } from "@/hooks/useTableState";
@@ -14,10 +44,39 @@ import { SortableHeader } from "@/components/SortableHeader";
 // Helper to convert number to Indian currency words
 function numberToWords(num: number): string {
   const a = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
-    "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
   ];
-  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const b = [
+    "",
+    "",
+    "Twenty",
+    "Thirty",
+    "Forty",
+    "Fifty",
+    "Sixty",
+    "Seventy",
+    "Eighty",
+    "Ninety",
+  ];
 
   function g(n: number): string {
     if (n < 20) return a[n];
@@ -76,17 +135,23 @@ interface BillFormData {
   parcel: number;
 }
 
-const emptyForm = (): BillFormData => ({
-  buyerId: 0,
-  billDate: new Date().toISOString().split("T")[0],
-  dueDate: null,
-  placeOfSupply: "Uttar Pradesh",
-  reverseCharge: "No",
-  items: [],
-  roundOff: 0,
-  transportId: null,
-  parcel: 1,
-});
+const emptyForm = (): BillFormData => {
+  const bd = new Date();
+  const billDate = bd.toISOString().split("T")[0];
+  bd.setMonth(bd.getMonth() + 3);
+  const dueDate = bd.toISOString().split("T")[0];
+  return {
+    buyerId: 0,
+    billDate,
+    dueDate,
+    placeOfSupply: "",
+    reverseCharge: "No",
+    items: [],
+    roundOff: 0,
+    transportId: null,
+    parcel: 1,
+  };
+};
 
 export default function Bills() {
   const { toast } = useToast();
@@ -106,7 +171,8 @@ export default function Bills() {
   });
 
   const utils = trpc.useUtils();
-  const { data: billsData, isLoading: billsLoading } = trpc.bill.list.useQuery();
+  const { data: billsData, isLoading: billsLoading } =
+    trpc.bill.list.useQuery();
   const { data: buyersData } = trpc.buyer.list.useQuery();
   const { data: itemsData } = trpc.item.list.useQuery();
   const { data: companyData } = trpc.settings.getCompany.useQuery();
@@ -119,6 +185,11 @@ export default function Bills() {
     defaultSortKey: "id",
     defaultSortDirection: "desc",
   });
+
+  const { data: nextBillData } = trpc.bill.getNextBillNumber.useQuery(
+    undefined,
+    { enabled: viewMode === "form" && !editingId },
+  );
 
   const createMutation = trpc.bill.create.useMutation({
     onSuccess: (res) => {
@@ -136,7 +207,12 @@ export default function Bills() {
       }
       setForm(emptyForm());
     },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) =>
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      }),
   });
 
   const updateMutation = trpc.bill.update.useMutation({
@@ -156,7 +232,12 @@ export default function Bills() {
       setEditingId(null);
       setForm(emptyForm());
     },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) =>
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      }),
   });
 
   const deleteMutation = trpc.bill.delete.useMutation({
@@ -164,7 +245,12 @@ export default function Bills() {
       utils.bill.list.invalidate();
       toast({ title: "Success", description: "Invoice deleted successfully" });
     },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) =>
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      }),
   });
 
   const createItemMutation = trpc.item.create.useMutation({
@@ -176,15 +262,30 @@ export default function Bills() {
       if (res.item) {
         handleAddLineItem(res.item.id, parseFloat(res.item.listPrice) || 0);
       }
-      setNewItemForm({ name: "", hsnCode: "", listPrice: 0, unit: "Pcs.", taxPercent: 18 });
+      setNewItemForm({
+        name: "",
+        hsnCode: "",
+        listPrice: 0,
+        unit: "Pcs.",
+        taxPercent: 18,
+      });
     },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) =>
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      }),
   });
 
   const handleCreateNewItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemForm.name.trim() || !newItemForm.hsnCode.trim()) {
-      toast({ title: "Error", description: "All fields are required", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "All fields are required",
+        variant: "destructive",
+      });
       return;
     }
     createItemMutation.mutate(newItemForm);
@@ -192,7 +293,18 @@ export default function Bills() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm(emptyForm());
+    const init = emptyForm();
+    if (companyData && companyData.state) {
+      init.placeOfSupply = companyData.state;
+    }
+    const lastBuyerId = localStorage.getItem("lastBuyerId");
+    if (lastBuyerId) {
+      init.buyerId = parseInt(lastBuyerId, 10);
+    }
+    const bd = new Date(init.billDate);
+    bd.setMonth(bd.getMonth() + 3);
+    init.dueDate = bd.toISOString().split("T")[0];
+    setForm(init);
     setViewMode("form");
   };
 
@@ -223,25 +335,44 @@ export default function Bills() {
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this invoice? This action is irreversible.")) {
+    if (
+      confirm(
+        "Are you sure you want to delete this invoice? This action is irreversible.",
+      )
+    ) {
       deleteMutation.mutate({ id });
     }
   };
 
   const handleAddLineItem = (itemId: number, customPrice?: number) => {
     if (form.items.some((line) => line.itemId === itemId)) {
-      toast({ title: "Duplicate Line", description: "This item is already in the invoice list." });
+      toast({
+        title: "Duplicate Line",
+        description: "This item is already in the invoice list.",
+      });
       return;
     }
     const catItem = itemsData?.items?.find((it: any) => it.id === itemId);
-    const price = customPrice !== undefined ? customPrice : (catItem ? parseFloat(catItem.listPrice) || 0 : 0);
+    const price =
+      customPrice !== undefined
+        ? customPrice
+        : catItem
+          ? parseFloat(catItem.listPrice) || 0
+          : 0;
     setForm((prev) => ({
       ...prev,
-      items: [...prev.items, { itemId, qty: 1, discountPercent: 0, listPrice: price }],
+      items: [
+        ...prev.items,
+        { itemId, qty: 1, discountPercent: 0, listPrice: price },
+      ],
     }));
   };
 
-  const handleUpdateLineItem = (index: number, key: keyof BillItemInput, value: number) => {
+  const handleUpdateLineItem = (
+    index: number,
+    key: keyof BillItemInput,
+    value: number,
+  ) => {
     const updated = [...form.items];
     updated[index] = { ...updated[index], [key]: value };
     setForm((prev) => ({ ...prev, items: updated }));
@@ -257,23 +388,34 @@ export default function Bills() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (form.buyerId === 0) {
-      toast({ title: "Validation Error", description: "Please select a buyer", variant: "destructive" });
+      toast({
+        title: "Validation Error",
+        description: "Please select a buyer",
+        variant: "destructive",
+      });
       return;
     }
     if (form.items.length === 0) {
-      toast({ title: "Validation Error", description: "Please add at least one line item", variant: "destructive" });
+      toast({
+        title: "Validation Error",
+        description: "Please add at least one line item",
+        variant: "destructive",
+      });
       return;
     }
 
     if (editingId) {
       updateMutation.mutate({ id: editingId, ...form });
     } else {
+      localStorage.setItem("lastBuyerId", form.buyerId.toString());
       createMutation.mutate(form);
     }
   };
 
   // Perform dynamic, reactive computations for the currently edited bill
-  const selectedBuyer = buyersData?.items?.find((b: any) => b.id === form.buyerId);
+  const selectedBuyer = buyersData?.items?.find(
+    (b: any) => b.id === form.buyerId,
+  );
   const calculatedStats = () => {
     let subtotal = 0;
     let totalDiscount = 0;
@@ -282,12 +424,15 @@ export default function Bills() {
     let sgstTotal = 0;
     let igstTotal = 0;
 
-    const isInterState = !form.placeOfSupply.toLowerCase().includes("uttar pradesh") && !form.placeOfSupply.includes("09");
+    const isInterState = checkIsInterState(form.placeOfSupply, companyData);
 
     form.items.forEach((line) => {
       const item = itemsData?.items?.find((it: any) => it.id === line.itemId);
       if (item) {
-        const price = line.listPrice !== undefined ? line.listPrice : (parseFloat(item.listPrice) || 0);
+        const price =
+          line.listPrice !== undefined
+            ? line.listPrice
+            : parseFloat(item.listPrice) || 0;
         const gross = price * line.qty;
         const disc = gross * (line.discountPercent / 100);
         const taxable = gross - disc;
@@ -328,7 +473,9 @@ export default function Bills() {
   const stats = calculatedStats();
 
   // Find active print bill details
-  const activePrintBill = billsData?.bills?.find((b: any) => b.id === selectedBillId);
+  const activePrintBill = billsData?.bills?.find(
+    (b: any) => b.id === selectedBillId,
+  );
 
   // Setup print command
   const triggerNativePrint = () => {
@@ -339,8 +486,9 @@ export default function Bills() {
     if (selectedBuyer) {
       setForm((prev) => ({
         ...prev,
-        placeOfSupply: selectedBuyer.state || "Uttar Pradesh",
-        transportId: selectedBuyer.defaultTransportId || prev.transportId || null,
+        placeOfSupply: selectedBuyer.state || companyData?.state || "",
+        transportId:
+          selectedBuyer.defaultTransportId || prev.transportId || null,
       }));
     }
   }, [form.buyerId, selectedBuyer]);
@@ -360,9 +508,22 @@ export default function Bills() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-[#1e2a4a]">
-              {editingId ? "Edit Tax Invoice" : "Create Tax Invoice"}
+              {editingId ? (
+                "Edit Tax Invoice"
+              ) : (
+                <>
+                  Create Tax Invoice{" "}
+                  {nextBillData?.nextBillNumber && (
+                    <span className="text-[#c4703f] ml-2 font-mono text-xl">
+                      #{nextBillData.nextBillNumber}
+                    </span>
+                  )}
+                </>
+              )}
             </h1>
-            <p className="text-[#6b7280] text-sm">Add company details, buyer info, catalog products, and taxes.</p>
+            <p className="text-[#6b7280] text-sm">
+              Add company details, buyer info, catalog products, and taxes.
+            </p>
           </div>
         </div>
 
@@ -378,10 +539,14 @@ export default function Bills() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[#1e2a4a]">Select Billing Buyer</Label>
+                    <Label className="text-[#1e2a4a]">
+                      Select Billing Buyer
+                    </Label>
                     <Select
                       value={String(form.buyerId)}
-                      onValueChange={(val) => setForm((prev) => ({ ...prev, buyerId: parseInt(val) }))}
+                      onValueChange={(val) =>
+                        setForm((prev) => ({ ...prev, buyerId: parseInt(val) }))
+                      }
                     >
                       <SelectTrigger className="bg-white border-[#dfd5c6]">
                         <SelectValue placeholder="Choose Buyer..." />
@@ -389,7 +554,8 @@ export default function Bills() {
                       <SelectContent className="bg-white">
                         {buyersData?.items?.map((b: any) => (
                           <SelectItem key={b.id} value={String(b.id)}>
-                            {b.companyName} {b.gstNumber ? `(${b.gstNumber})` : ""}
+                            {b.companyName}{" "}
+                            {b.gstNumber ? `(${b.gstNumber})` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -400,7 +566,12 @@ export default function Bills() {
                     <Label className="text-[#1e2a4a]">Place of Supply</Label>
                     <Input
                       value={form.placeOfSupply}
-                      onChange={(e) => setForm((prev) => ({ ...prev, placeOfSupply: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          placeOfSupply: e.target.value,
+                        }))
+                      }
                       placeholder="e.g. Uttar Pradesh"
                       className="bg-white border-[#dfd5c6]"
                     />
@@ -413,7 +584,12 @@ export default function Bills() {
                     <Input
                       type="date"
                       value={form.billDate}
-                      onChange={(e) => setForm((prev) => ({ ...prev, billDate: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          billDate: e.target.value,
+                        }))
+                      }
                       className="bg-white border-[#dfd5c6]"
                     />
                   </div>
@@ -422,7 +598,12 @@ export default function Bills() {
                     <Input
                       type="date"
                       value={form.dueDate || ""}
-                      onChange={(e) => setForm((prev) => ({ ...prev, dueDate: e.target.value || null }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          dueDate: e.target.value || null,
+                        }))
+                      }
                       className="bg-white border-[#dfd5c6]"
                     />
                   </div>
@@ -433,16 +614,24 @@ export default function Bills() {
                     <Label className="text-[#1e2a4a]">Transport Partner</Label>
                     <Select
                       value={form.transportId ? String(form.transportId) : "NA"}
-                      onValueChange={(val) => setForm((prev) => ({ ...prev, transportId: val === "NA" ? null : parseInt(val) }))}
+                      onValueChange={(val) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          transportId: val === "NA" ? null : parseInt(val),
+                        }))
+                      }
                     >
                       <SelectTrigger className="bg-white border-[#dfd5c6]">
                         <SelectValue placeholder="Choose Transport..." />
                       </SelectTrigger>
                       <SelectContent className="bg-white">
-                        <SelectItem value="NA">NA (No Transport / Use Default)</SelectItem>
+                        <SelectItem value="NA">
+                          NA (No Transport / Use Default)
+                        </SelectItem>
                         {transports.map((t: any) => (
                           <SelectItem key={t.id} value={String(t.id)}>
-                            {t.name} {t.vehicleNumber ? `(${t.vehicleNumber})` : ""}
+                            {t.name}{" "}
+                            {t.vehicleNumber ? `(${t.vehicleNumber})` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -455,7 +644,12 @@ export default function Bills() {
                       type="number"
                       min="0"
                       value={form.parcel}
-                      onChange={(e) => setForm((prev) => ({ ...prev, parcel: parseInt(e.target.value) || 0 }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          parcel: parseInt(e.target.value) || 0,
+                        }))
+                      }
                       className="bg-white border-[#dfd5c6]"
                     />
                   </div>
@@ -470,7 +664,9 @@ export default function Bills() {
                   </h3>
                   <div className="flex gap-2">
                     {/* Select Item Trigger Dropdown */}
-                    <Select onValueChange={(val) => handleAddLineItem(parseInt(val))}>
+                    <Select
+                      onValueChange={(val) => handleAddLineItem(parseInt(val))}
+                    >
                       <SelectTrigger className="w-[180px] h-8 text-xs bg-[#fbfaf7] border-[#dfd5c6]">
                         <SelectValue placeholder="Add Line Item..." />
                       </SelectTrigger>
@@ -498,7 +694,8 @@ export default function Bills() {
 
                 {form.items.length === 0 ? (
                   <div className="text-center py-10 text-gray-400 text-sm">
-                    No line items added yet. Click "Add Line Item" above to populate products.
+                    No line items added yet. Click "Add Line Item" above to
+                    populate products.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -519,10 +716,15 @@ export default function Bills() {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {form.items.map((line, idx) => {
-                          const catItem = itemsData?.items?.find((it: any) => it.id === line.itemId);
+                          const catItem = itemsData?.items?.find(
+                            (it: any) => it.id === line.itemId,
+                          );
                           if (!catItem) return null;
 
-                          const price = line.listPrice !== undefined ? line.listPrice : (parseFloat(catItem.listPrice) || 0);
+                          const price =
+                            line.listPrice !== undefined
+                              ? line.listPrice
+                              : parseFloat(catItem.listPrice) || 0;
                           const gross = price * line.qty;
                           const disc = gross * (line.discountPercent / 100);
                           const taxRate = parseFloat(catItem.taxPercent) || 0;
@@ -532,29 +734,55 @@ export default function Bills() {
 
                           return (
                             <tr key={idx} className="hover:bg-gray-50/50">
-                              <td className="py-3 pr-2 text-gray-500">{idx + 1}</td>
-                              <td className="py-3 font-medium text-[#1e2a4a]">{catItem.name}</td>
-                              <td className="py-3 font-mono text-gray-500">{catItem.hsnCode}</td>
+                              <td className="py-3 pr-2 text-gray-500">
+                                {idx + 1}
+                              </td>
+                              <td className="py-3 font-medium text-[#1e2a4a]">
+                                {catItem.name}
+                              </td>
+                              <td className="py-3 font-mono text-gray-500">
+                                {catItem.hsnCode}
+                              </td>
                               <td className="py-3 text-right">
                                 <Input
                                   type="number"
                                   min="1"
                                   value={line.qty}
-                                  onChange={(e) => handleUpdateLineItem(idx, "qty", parseInt(e.target.value) || 1)}
+                                  onChange={(e) =>
+                                    handleUpdateLineItem(
+                                      idx,
+                                      "qty",
+                                      parseInt(e.target.value) || 1,
+                                    )
+                                  }
                                   className="w-16 h-7 text-right p-1 text-xs border-[#dfd5c6] bg-white font-mono"
                                   id={`bill-qty-${idx}`}
                                 />
                               </td>
-                              <td className="py-3 pl-3 text-gray-500">{catItem.unit}</td>
+                              <td className="py-3 pl-3 text-gray-500">
+                                {catItem.unit}
+                              </td>
                               <td className="py-3 text-right font-mono">
                                 <div className="flex items-center justify-end gap-1">
-                                  <span className="text-gray-400 text-[10px]">₹</span>
+                                  <span className="text-gray-400 text-[10px]">
+                                    ₹
+                                  </span>
                                   <Input
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    value={line.listPrice !== undefined ? line.listPrice : price}
-                                    onChange={(e) => handleUpdateLineItem(idx, "listPrice", parseFloat(e.target.value) || 0)}
+                                    value={
+                                      line.listPrice !== undefined
+                                        ? line.listPrice
+                                        : price
+                                    }
+                                    onChange={(e) =>
+                                      handleUpdateLineItem(
+                                        idx,
+                                        "listPrice",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
                                     className="w-20 h-7 text-right p-1 text-xs border-[#dfd5c6] bg-white font-mono"
                                     id={`bill-price-${idx}`}
                                   />
@@ -566,13 +794,25 @@ export default function Bills() {
                                   min="0"
                                   max="100"
                                   value={line.discountPercent}
-                                  onChange={(e) => handleUpdateLineItem(idx, "discountPercent", parseFloat(e.target.value) || 0)}
+                                  onChange={(e) =>
+                                    handleUpdateLineItem(
+                                      idx,
+                                      "discountPercent",
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
                                   className="w-16 h-7 text-right p-1 text-xs border-[#dfd5c6] bg-white font-mono"
                                 />
                               </td>
-                              <td className="py-3 text-right font-mono text-gray-500">{catItem.taxPercent}%</td>
+                              <td className="py-3 text-right font-mono text-gray-500">
+                                {catItem.taxPercent}%
+                              </td>
                               <td className="py-3 text-right font-semibold font-mono text-[#1e2a4a]">
-                                ₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ₹
+                                {total.toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
                               </td>
                               <td className="py-3 text-center">
                                 <Button
@@ -605,50 +845,72 @@ export default function Bills() {
                 <div className="space-y-3.5 text-xs text-gray-600">
                   <div className="flex justify-between">
                     <span>Gross Subtotal:</span>
-                    <span className="font-semibold font-mono text-[#1e2a4a]">₹{stats.subtotal.toFixed(2)}</span>
+                    <span className="font-semibold font-mono text-[#1e2a4a]">
+                      ₹{stats.subtotal.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-red-600">
                     <span>Discount Deducted:</span>
-                    <span className="font-semibold font-mono">-₹{stats.totalDiscount.toFixed(2)}</span>
+                    <span className="font-semibold font-mono">
+                      -₹{stats.totalDiscount.toFixed(2)}
+                    </span>
                   </div>
                   <div className="border-t border-dashed border-gray-100 my-1"></div>
                   <div className="flex justify-between">
                     <span>Net Taxable Amount:</span>
-                    <span className="font-semibold font-mono text-[#1e2a4a]">₹{stats.netSubtotal.toFixed(2)}</span>
+                    <span className="font-semibold font-mono text-[#1e2a4a]">
+                      ₹{stats.netSubtotal.toFixed(2)}
+                    </span>
                   </div>
 
                   {stats.cgstTotal > 0 && (
                     <div className="flex justify-between text-gray-500 pl-3">
                       <span>CGST Total:</span>
-                      <span className="font-mono">₹{stats.cgstTotal.toFixed(2)}</span>
+                      <span className="font-mono">
+                        ₹{stats.cgstTotal.toFixed(2)}
+                      </span>
                     </div>
                   )}
                   {stats.sgstTotal > 0 && (
                     <div className="flex justify-between text-gray-500 pl-3">
                       <span>SGST Total:</span>
-                      <span className="font-mono">₹{stats.sgstTotal.toFixed(2)}</span>
+                      <span className="font-mono">
+                        ₹{stats.sgstTotal.toFixed(2)}
+                      </span>
                     </div>
                   )}
                   {stats.igstTotal > 0 && (
                     <div className="flex justify-between text-gray-500 pl-3">
                       <span>IGST Total:</span>
-                      <span className="font-mono text-orange-600">₹{stats.igstTotal.toFixed(2)}</span>
+                      <span className="font-mono text-orange-600">
+                        ₹{stats.igstTotal.toFixed(2)}
+                      </span>
                     </div>
                   )}
 
                   <div className="flex justify-between">
                     <span>Total Tax (GST):</span>
-                    <span className="font-semibold font-mono text-[#1e2a4a]">₹{stats.totalTax.toFixed(2)}</span>
+                    <span className="font-semibold font-mono text-[#1e2a4a]">
+                      ₹{stats.totalTax.toFixed(2)}
+                    </span>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span>Manual / Auto Roundoff:</span>
-                    <span className="font-mono text-gray-500 font-medium">₹{stats.autoRoundOff.toFixed(2)}</span>
+                    <span className="font-mono text-gray-500 font-medium">
+                      ₹{stats.autoRoundOff.toFixed(2)}
+                    </span>
                   </div>
 
                   <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-sm font-bold text-[#1e2a4a]">
                     <span>Grand Total Due:</span>
-                    <span className="text-[#c4703f] font-mono text-base">₹{stats.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-[#c4703f] font-mono text-base">
+                      ₹
+                      {stats.totalAmount.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
 
                   <div className="text-[10px] text-gray-400 text-center leading-relaxed font-serif italic pt-2">
@@ -660,9 +922,15 @@ export default function Bills() {
                   <Button
                     type="submit"
                     className="w-full bg-[#c4703f] hover:bg-[#b05e2f] text-white font-semibold"
-                    disabled={createMutation.isPending || updateMutation.isPending}
+                    disabled={
+                      createMutation.isPending || updateMutation.isPending
+                    }
                   >
-                    {createMutation.isPending || updateMutation.isPending ? "Generating Invoice..." : editingId ? "Update Invoice" : "Generate Invoice"}
+                    {createMutation.isPending || updateMutation.isPending
+                      ? "Generating Invoice..."
+                      : editingId
+                        ? "Update Invoice"
+                        : "Generate Invoice"}
                   </Button>
                   <Button
                     type="button"
@@ -682,7 +950,9 @@ export default function Bills() {
         <Dialog open={newItemModalOpen} onOpenChange={setNewItemModalOpen}>
           <DialogContent className="sm:max-w-md bg-[#fbfaf7]">
             <DialogHeader>
-              <DialogTitle className="text-[#1e2a4a] font-bold">Quick Catalog Addition</DialogTitle>
+              <DialogTitle className="text-[#1e2a4a] font-bold">
+                Quick Catalog Addition
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateNewItem} className="space-y-4 pt-2">
               <div className="space-y-1">
@@ -690,7 +960,12 @@ export default function Bills() {
                 <Input
                   id="nested-name"
                   value={newItemForm.name}
-                  onChange={(e) => setNewItemForm((prev) => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setNewItemForm((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
+                  }
                   placeholder="e.g. Silk Shirt"
                   required
                   className="bg-white border-[#dfd5c6]"
@@ -703,7 +978,12 @@ export default function Bills() {
                   <Input
                     id="nested-hsn"
                     value={newItemForm.hsnCode}
-                    onChange={(e) => setNewItemForm((prev) => ({ ...prev, hsnCode: e.target.value }))}
+                    onChange={(e) =>
+                      setNewItemForm((prev) => ({
+                        ...prev,
+                        hsnCode: e.target.value,
+                      }))
+                    }
                     placeholder="39231020"
                     required
                     className="bg-white border-[#dfd5c6]"
@@ -713,7 +993,9 @@ export default function Bills() {
                   <Label htmlFor="nested-unit">Unit</Label>
                   <Select
                     value={newItemForm.unit}
-                    onValueChange={(val) => setNewItemForm((prev) => ({ ...prev, unit: val }))}
+                    onValueChange={(val) =>
+                      setNewItemForm((prev) => ({ ...prev, unit: val }))
+                    }
                   >
                     <SelectTrigger className="bg-white border-[#dfd5c6]">
                       <SelectValue />
@@ -736,7 +1018,12 @@ export default function Bills() {
                     type="number"
                     step="0.01"
                     value={newItemForm.listPrice}
-                    onChange={(e) => setNewItemForm((prev) => ({ ...prev, listPrice: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) =>
+                      setNewItemForm((prev) => ({
+                        ...prev,
+                        listPrice: parseFloat(e.target.value) || 0,
+                      }))
+                    }
                     required
                     className="bg-white border-[#dfd5c6]"
                   />
@@ -745,7 +1032,12 @@ export default function Bills() {
                   <Label htmlFor="nested-tax">GST Rate (%)</Label>
                   <Select
                     value={String(newItemForm.taxPercent)}
-                    onValueChange={(val) => setNewItemForm((prev) => ({ ...prev, taxPercent: parseFloat(val) }))}
+                    onValueChange={(val) =>
+                      setNewItemForm((prev) => ({
+                        ...prev,
+                        taxPercent: parseFloat(val),
+                      }))
+                    }
                   >
                     <SelectTrigger className="bg-white border-[#dfd5c6]">
                       <SelectValue />
@@ -775,7 +1067,9 @@ export default function Bills() {
                   className="bg-[#c4703f] hover:bg-[#b05e2f] text-white"
                   disabled={createItemMutation.isPending}
                 >
-                  {createItemMutation.isPending ? "Adding..." : "Add to Catalog & Invoice"}
+                  {createItemMutation.isPending
+                    ? "Adding..."
+                    : "Add to Catalog & Invoice"}
                 </Button>
               </div>
             </form>
@@ -787,10 +1081,14 @@ export default function Bills() {
 
   // Visual TAX INVOICE Printable Render Mode
   if (viewMode === "print" && activePrintBill) {
-    const totalWords = numberToWords(parseFloat(activePrintBill.totalAmount || "0"));
+    const totalWords = numberToWords(
+      parseFloat(activePrintBill.totalAmount || "0"),
+    );
     const finalComp = {
       companyName: companyData?.companyName || "Alpha Wholesale",
-      address: companyData?.address || "123 Commercial Belt, Sector 4, Noida, Uttar Pradesh",
+      address:
+        companyData?.address ||
+        "123 Commercial Belt, Sector 4, Noida, Uttar Pradesh",
       phone: companyData?.phone || "+91 9999999999",
       email: companyData?.email || "company@gmail.com",
       gstNumber: companyData?.gstNumber || "09AAAAA1234A1Z2",
@@ -802,8 +1100,8 @@ export default function Bills() {
       terms: companyData?.terms || [
         "1. Goods once sold will not be taken back.",
         "2. Interest @ 18% p.a. will be charged if the payment for Company Name is not made within the stipulated time.",
-        "3. Subject to 'Delhi' Jurisdiction only."
-      ]
+        "3. Subject to 'Delhi' Jurisdiction only.",
+      ],
     };
 
     return (
@@ -828,7 +1126,9 @@ export default function Bills() {
         {/* Printable Tax Invoice Frame */}
         <div className="bg-white text-black p-6 md:p-8 rounded-xl shadow-lg border border-gray-300 max-w-[850px] mx-auto print:border-none print:shadow-none print:p-0 print:m-0 font-sans leading-tight">
           {/* Printable CSS Injection */}
-          <style dangerouslySetInnerHTML={{ __html: `
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
             @media print {
               body * {
                 visibility: hidden;
@@ -854,20 +1154,30 @@ export default function Bills() {
                 padding: 4px 6px !important;
               }
             }
-          ` }} />
+          `,
+            }}
+          />
 
           <div className="print-container space-y-4">
             {/* Header: TAX INVOICE */}
             <div className="flex justify-between items-center border-b-2 border-black pb-2">
-              <span className="text-xs font-mono font-bold">Page No. 1 of 1</span>
-              <h1 className="text-lg font-bold uppercase tracking-wider text-center">TAX INVOICE</h1>
+              <span className="text-xs font-mono font-bold">
+                Page No. 1 of 1
+              </span>
+              <h1 className="text-lg font-bold uppercase tracking-wider text-center">
+                TAX INVOICE
+              </h1>
               <span className="text-xs font-mono font-bold">Original Copy</span>
             </div>
 
             {/* Company Block */}
             <div className="text-center space-y-1">
-              <h2 className="text-xl font-black tracking-tight uppercase">{finalComp.companyName}</h2>
-              <p className="text-xs font-medium text-gray-700">{finalComp.address}</p>
+              <h2 className="text-xl font-black tracking-tight uppercase">
+                {finalComp.companyName}
+              </h2>
+              <p className="text-xs font-medium text-gray-700">
+                {finalComp.address}
+              </p>
               <p className="text-xs text-gray-700 font-mono">
                 Mobile: {finalComp.phone} | Email: {finalComp.email}
               </p>
@@ -879,23 +1189,67 @@ export default function Bills() {
             {/* Specifications Matrix */}
             <div className="grid grid-cols-2 border border-black text-xs">
               <div className="p-2 border-r border-black space-y-1">
-                <div className="flex"><span className="w-28 font-bold">Invoice Number</span><span>: {activePrintBill.billNumber}</span></div>
-                <div className="flex"><span className="w-28 font-bold">Invoice Date</span><span>: {activePrintBill.billDate ? new Date(activePrintBill.billDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" }) : "N/A"}</span></div>
+                <div className="flex">
+                  <span className="w-28 font-bold">Invoice Number</span>
+                  <span>: {activePrintBill.billNumber}</span>
+                </div>
+                <div className="flex">
+                  <span className="w-28 font-bold">Invoice Date</span>
+                  <span>
+                    :{" "}
+                    {activePrintBill.billDate
+                      ? new Date(activePrintBill.billDate).toLocaleDateString(
+                          "en-IN",
+                          { day: "2-digit", month: "short", year: "2-digit" },
+                        )
+                      : "N/A"}
+                  </span>
+                </div>
                 {activePrintBill.dueDate && (
-                  <div className="flex"><span className="w-28 font-bold">Due Date</span><span>: {new Date(activePrintBill.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</span></div>
+                  <div className="flex">
+                    <span className="w-28 font-bold">Due Date</span>
+                    <span>
+                      :{" "}
+                      {new Date(activePrintBill.dueDate).toLocaleDateString(
+                        "en-IN",
+                        { day: "2-digit", month: "short", year: "2-digit" },
+                      )}
+                    </span>
+                  </div>
                 )}
-                <div className="flex"><span className="w-28 font-bold">Place of Supply</span><span>: {activePrintBill.placeOfSupply}</span></div>
-                {activePrintBill.transportName && activePrintBill.transportName !== "NA" && (
-                  <div className="flex"><span className="w-28 font-bold">Transport Partner</span><span>: {activePrintBill.transportName}</span></div>
-                )}
+                <div className="flex">
+                  <span className="w-28 font-bold">Place of Supply</span>
+                  <span>: {activePrintBill.placeOfSupply}</span>
+                </div>
+                {activePrintBill.transportName &&
+                  activePrintBill.transportName !== "NA" && (
+                    <div className="flex">
+                      <span className="w-28 font-bold">Transport Partner</span>
+                      <span>: {activePrintBill.transportName}</span>
+                    </div>
+                  )}
               </div>
               <div className="p-2 space-y-1.5">
-                <h4 className="font-bold border-b border-gray-300 pb-0.5">Billing & Shipping Details</h4>
-                <div className="text-xs font-bold">{activePrintBill.buyerName}</div>
-                {activePrintBill.buyerAddress && <div className="text-gray-700">{activePrintBill.buyerAddress}</div>}
+                <h4 className="font-bold border-b border-gray-300 pb-0.5">
+                  Billing & Shipping Details
+                </h4>
+                <div className="text-xs font-bold">
+                  {activePrintBill.buyerName}
+                </div>
+                {activePrintBill.buyerAddress && (
+                  <div className="text-gray-700">
+                    {activePrintBill.buyerAddress}
+                  </div>
+                )}
                 <div className="font-mono text-xs">
-                  {activePrintBill.buyerGst && <span className="font-bold mr-3">GSTIN: {activePrintBill.buyerGst}</span>}
-                  {activePrintBill.buyerPhone && <span>Mobile: {activePrintBill.buyerPhone}</span>}
+                  {activePrintBill.buyerGst && (
+                    <span className="font-bold mr-3">
+                      GSTIN: {activePrintBill.buyerGst}
+                    </span>
+                  )}
+                  {activePrintBill.buyerPhone && (
+                    <span>Mobile: {activePrintBill.buyerPhone}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -905,78 +1259,137 @@ export default function Bills() {
               <table className="w-full text-xs text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-100 border-b border-black text-[11px] font-bold">
-                    <th className="py-1 px-2 border-r border-black w-8 text-center">Sr.</th>
-                    <th className="py-1 px-2 border-r border-black">Item Description</th>
-                    <th className="py-1 px-2 border-r border-black w-20 text-center">HSN/SAC</th>
-                    <th className="py-1 px-2 border-r border-black w-10 text-right">Qty</th>
-                    <th className="py-1 px-2 border-r border-black w-10">Unit</th>
-                    <th className="py-1 px-2 border-r border-black w-16 text-right">List Price</th>
-                    <th className="py-1 px-2 border-r border-black w-14 text-right">Disc. %</th>
-                    <th className="py-1 px-2 border-r border-black w-16 text-right">CGST</th>
-                    <th className="py-1 px-2 border-r border-black w-16 text-right">SGST</th>
-                    <th className="py-1 px-2 border-r border-black w-16 text-right">IGST</th>
+                    <th className="py-1 px-2 border-r border-black w-8 text-center">
+                      Sr.
+                    </th>
+                    <th className="py-1 px-2 border-r border-black">
+                      Item Description
+                    </th>
+                    <th className="py-1 px-2 border-r border-black w-20 text-center">
+                      HSN/SAC
+                    </th>
+                    <th className="py-1 px-2 border-r border-black w-10 text-right">
+                      Qty
+                    </th>
+                    <th className="py-1 px-2 border-r border-black w-10">
+                      Unit
+                    </th>
+                    <th className="py-1 px-2 border-r border-black w-16 text-right">
+                      List Price
+                    </th>
+                    <th className="py-1 px-2 border-r border-black w-14 text-right">
+                      Disc. %
+                    </th>
+                    <th className="py-1 px-2 border-r border-black w-16 text-right">
+                      CGST
+                    </th>
+                    <th className="py-1 px-2 border-r border-black w-16 text-right">
+                      SGST
+                    </th>
+                    <th className="py-1 px-2 border-r border-black w-16 text-right">
+                      IGST
+                    </th>
                     <th className="py-1 px-2 text-right w-20">Amount (₹)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-300">
-                  {(activePrintBill.items || []).map((it: any, index: number) => {
-                    const isInterState = !(activePrintBill.placeOfSupply || "").toLowerCase().includes("uttar pradesh") && !(activePrintBill.placeOfSupply || "").includes("09");
-                    const price = parseFloat(it.listPrice || "0");
-                    const qty = parseFloat(it.qty || "0");
-                    const gross = price * qty;
-                    const discountPercent = parseFloat(it.discountPercent || "0");
-                    const discAmount = gross * (discountPercent / 100);
-                    const taxable = gross - discAmount;
-                    const taxPercent = parseFloat(it.taxPercent || "0");
-                    const taxAmount = taxable * (taxPercent / 100);
+                  {(activePrintBill.items || []).map(
+                    (it: any, index: number) => {
+                      const isInterState = checkIsInterState(
+                        activePrintBill.placeOfSupply || "",
+                        companyData,
+                      );
+                      const price = parseFloat(it.listPrice || "0");
+                      const qty = parseFloat(it.qty || "0");
+                      const gross = price * qty;
+                      const discountPercent = parseFloat(
+                        it.discountPercent || "0",
+                      );
+                      const discAmount = gross * (discountPercent / 100);
+                      const taxable = gross - discAmount;
+                      const taxPercent = parseFloat(it.taxPercent || "0");
+                      const taxAmount = taxable * (taxPercent / 100);
 
-                    const cgstPct = isInterState ? 0 : taxPercent / 2;
-                    const cgstAmt = isInterState ? 0 : taxAmount / 2;
+                      const cgstPct = isInterState ? 0 : taxPercent / 2;
+                      const cgstAmt = isInterState ? 0 : taxAmount / 2;
 
-                    const sgstPct = isInterState ? 0 : taxPercent / 2;
-                    const sgstAmt = isInterState ? 0 : taxAmount / 2;
+                      const sgstPct = isInterState ? 0 : taxPercent / 2;
+                      const sgstAmt = isInterState ? 0 : taxAmount / 2;
 
-                    const igstPct = isInterState ? taxPercent : 0;
-                    const igstAmt = isInterState ? taxAmount : 0;
+                      const igstPct = isInterState ? taxPercent : 0;
+                      const igstAmt = isInterState ? taxAmount : 0;
 
-                    return (
-                      <tr key={index} className="text-[11px]">
-                        <td className="py-1 px-2 border-r border-black text-center font-mono">{index + 1}</td>
-                        <td className="py-1 px-2 border-r border-black font-medium">{it.name}</td>
-                        <td className="py-1 px-2 border-r border-black text-center font-mono">{it.hsnCode}</td>
-                        <td className="py-1 px-2 border-r border-black text-right font-mono">{it.qty}.00</td>
-                        <td className="py-1 px-2 border-r border-black">{it.unit}</td>
-                        <td className="py-1 px-2 border-r border-black text-right font-mono">₹{price.toFixed(2)}</td>
-                        <td className="py-1 px-2 border-r border-black text-right font-mono">{discountPercent.toFixed(1)}%</td>
-                        <td className="py-1 px-2 border-r border-black text-right font-mono">
-                          {cgstAmt > 0 ? `${cgstPct}% (₹${cgstAmt.toFixed(2)})` : "—"}
-                        </td>
-                        <td className="py-1 px-2 border-r border-black text-right font-mono">
-                          {sgstAmt > 0 ? `${sgstPct}% (₹${sgstAmt.toFixed(2)})` : "—"}
-                        </td>
-                        <td className="py-1 px-2 border-r border-black text-right font-mono">
-                          {igstAmt > 0 ? `${igstPct}% (₹${igstAmt.toFixed(2)})` : "—"}
-                        </td>
-                        <td className="py-1 px-2 text-right font-semibold font-mono">₹{parseFloat(it.amount || "0").toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      </tr>
-                    );
-                  })}
+                      return (
+                        <tr key={index} className="text-[11px]">
+                          <td className="py-1 px-2 border-r border-black text-center font-mono">
+                            {index + 1}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black font-medium">
+                            {it.name}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-center font-mono">
+                            {it.hsnCode}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-right font-mono">
+                            {it.qty}.00
+                          </td>
+                          <td className="py-1 px-2 border-r border-black">
+                            {it.unit}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-right font-mono">
+                            ₹{price.toFixed(2)}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-right font-mono">
+                            {discountPercent.toFixed(1)}%
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-right font-mono">
+                            {cgstAmt > 0
+                              ? `${cgstPct}% (₹${cgstAmt.toFixed(2)})`
+                              : "—"}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-right font-mono">
+                            {sgstAmt > 0
+                              ? `${sgstPct}% (₹${sgstAmt.toFixed(2)})`
+                              : "—"}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-right font-mono">
+                            {igstAmt > 0
+                              ? `${igstPct}% (₹${igstAmt.toFixed(2)})`
+                              : "—"}
+                          </td>
+                          <td className="py-1 px-2 text-right font-semibold font-mono">
+                            ₹
+                            {parseFloat(it.amount || "0").toLocaleString(
+                              "en-IN",
+                              {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              },
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    },
+                  )}
                   {/* Fill empty spaces to maintain structural density */}
-                  {(activePrintBill.items || []).length < 5 && Array.from({ length: 5 - (activePrintBill.items || []).length }).map((_, i) => (
-                    <tr key={`empty-${i}`} className="h-6 text-[11px]">
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 border-r border-black"></td>
-                      <td className="py-1 px-2 text-right"></td>
-                    </tr>
-                  ))}
+                  {(activePrintBill.items || []).length < 5 &&
+                    Array.from({
+                      length: 5 - (activePrintBill.items || []).length,
+                    }).map((_, i) => (
+                      <tr key={`empty-${i}`} className="h-6 text-[11px]">
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 border-r border-black"></td>
+                        <td className="py-1 px-2 text-right"></td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -985,53 +1398,84 @@ export default function Bills() {
             <div className="border border-black grid grid-cols-3 text-xs">
               <div className="col-span-2 p-2 border-r border-black flex flex-col justify-between">
                 <div>
-                  <h4 className="font-bold uppercase tracking-wider text-gray-700 text-[10px] mb-1 border-b border-gray-200">Amount Charged in Words</h4>
+                  <h4 className="font-bold uppercase tracking-wider text-gray-700 text-[10px] mb-1 border-b border-gray-200">
+                    Amount Charged in Words
+                  </h4>
                   <p className="font-serif italic font-semibold text-xs text-gray-900">
                     {totalWords}
                   </p>
                 </div>
                 {parseFloat(activePrintBill.discountAmount || "0") > 0 && (
                   <div className="text-green-700 font-medium font-mono text-[11px] pt-1 mt-2 border-t border-dashed border-gray-200">
-                    * Total Discount saved on this invoice: ₹{parseFloat(activePrintBill.discountAmount || "0").toFixed(2)}
+                    * Total Discount saved on this invoice: ₹
+                    {parseFloat(activePrintBill.discountAmount || "0").toFixed(
+                      2,
+                    )}
                   </div>
                 )}
               </div>
               <div className="p-2 space-y-1 font-mono text-[11px]">
                 <div className="flex justify-between">
                   <span>Gross Subtotal:</span>
-                  <span>₹{parseFloat(activePrintBill.subtotal || "0").toFixed(2)}</span>
+                  <span>
+                    ₹{parseFloat(activePrintBill.subtotal || "0").toFixed(2)}
+                  </span>
                 </div>
                 {parseFloat(activePrintBill.discountAmount || "0") > 0 && (
                   <div className="flex justify-between text-red-600">
                     <span>Discount:</span>
-                    <span>-₹{parseFloat(activePrintBill.discountAmount || "0").toFixed(2)}</span>
+                    <span>
+                      -₹
+                      {parseFloat(
+                        activePrintBill.discountAmount || "0",
+                      ).toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {parseFloat(activePrintBill.cgstAmount || "0") > 0 && (
                   <div className="flex justify-between text-gray-600">
                     <span>CGST:</span>
-                    <span>₹{parseFloat(activePrintBill.cgstAmount || "0").toFixed(2)}</span>
+                    <span>
+                      ₹
+                      {parseFloat(activePrintBill.cgstAmount || "0").toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {parseFloat(activePrintBill.sgstAmount || "0") > 0 && (
                   <div className="flex justify-between text-gray-600">
                     <span>SGST:</span>
-                    <span>₹{parseFloat(activePrintBill.sgstAmount || "0").toFixed(2)}</span>
+                    <span>
+                      ₹
+                      {parseFloat(activePrintBill.sgstAmount || "0").toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {parseFloat(activePrintBill.igstAmount || "0") > 0 && (
                   <div className="flex justify-between text-orange-600">
                     <span>IGST:</span>
-                    <span>₹{parseFloat(activePrintBill.igstAmount || "0").toFixed(2)}</span>
+                    <span>
+                      ₹
+                      {parseFloat(activePrintBill.igstAmount || "0").toFixed(2)}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-gray-300 pt-1">
                   <span>Round Off:</span>
-                  <span>₹{parseFloat(activePrintBill.roundOff || "0").toFixed(2)}</span>
+                  <span>
+                    ₹{parseFloat(activePrintBill.roundOff || "0").toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between border-t-2 border-black pt-1 font-bold text-xs text-black">
                   <span>Total Amount:</span>
-                  <span>₹{parseFloat(activePrintBill.totalAmount || "0").toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>
+                    ₹
+                    {parseFloat(
+                      activePrintBill.totalAmount || "0",
+                    ).toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1039,23 +1483,32 @@ export default function Bills() {
             {/* Parcel Details Row */}
             <div className="border-l border-r border-b border-black p-2 flex justify-between items-center text-xs bg-[#fdfcfb]">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold uppercase tracking-wider text-[10px] text-gray-700">Parcel Qty:</span>
+                <span className="font-bold uppercase tracking-wider text-[10px] text-gray-700">
+                  Parcel Qty:
+                </span>
                 <span className="font-mono font-bold text-xs bg-orange-100/50 px-2 py-0.5 rounded text-orange-800 border border-orange-200">
-                  {activePrintBill.parcel !== undefined ? (activePrintBill.parcel ?? 1) : 1}
+                  {activePrintBill.parcel !== undefined
+                    ? (activePrintBill.parcel ?? 1)
+                    : 1}
                 </span>
               </div>
-              {activePrintBill.transportName && activePrintBill.transportName !== "N/A" && (
-                <div className="text-[10px] text-gray-600 font-mono">
-                  <span className="font-semibold text-black uppercase text-[9px] mr-1">Transport:</span>
-                  {activePrintBill.transportName}
-                </div>
-              )}
+              {activePrintBill.transportName &&
+                activePrintBill.transportName !== "N/A" && (
+                  <div className="text-[10px] text-gray-600 font-mono">
+                    <span className="font-semibold text-black uppercase text-[9px] mr-1">
+                      Transport:
+                    </span>
+                    {activePrintBill.transportName}
+                  </div>
+                )}
             </div>
 
             {/* Terms, Settlement bank, and Signature Footer */}
             <div className="grid grid-cols-3 border-l border-r border-b border-black text-xs">
               <div className="col-span-2 p-2 border-r border-black space-y-1">
-                <h4 className="font-bold border-b border-gray-200 pb-0.5 uppercase tracking-wider text-[10px]">Terms and Conditions</h4>
+                <h4 className="font-bold border-b border-gray-200 pb-0.5 uppercase tracking-wider text-[10px]">
+                  Terms and Conditions
+                </h4>
                 <ul className="list-none space-y-0.5 text-[10px] text-gray-600 font-serif leading-relaxed">
                   {(finalComp.terms || []).map((term: string, i: number) => (
                     <li key={i}>{term}</li>
@@ -1063,23 +1516,44 @@ export default function Bills() {
                 </ul>
               </div>
               <div className="p-2 space-y-1">
-                <h4 className="font-bold border-b border-gray-200 pb-0.5 uppercase tracking-wider text-[10px]">Settlement Account</h4>
+                <h4 className="font-bold border-b border-gray-200 pb-0.5 uppercase tracking-wider text-[10px]">
+                  Settlement Account
+                </h4>
                 <div className="text-[10px] font-mono text-gray-700 leading-tight space-y-0.5">
-                  <div><span className="font-bold text-black">Bank:</span> {finalComp.bankName}</div>
-                  <div><span className="font-bold text-black">A/c:</span> {finalComp.accountNumber}</div>
-                  <div><span className="font-bold text-black">IFSC:</span> {finalComp.ifscCode}</div>
-                  <div><span className="font-bold text-black">Branch:</span> {finalComp.branchName}</div>
-                  <div className="pt-1"><span className="font-bold text-black">Name:</span> {finalComp.authorizedSignatory}</div>
+                  <div>
+                    <span className="font-bold text-black">Bank:</span>{" "}
+                    {finalComp.bankName}
+                  </div>
+                  <div>
+                    <span className="font-bold text-black">A/c:</span>{" "}
+                    {finalComp.accountNumber}
+                  </div>
+                  <div>
+                    <span className="font-bold text-black">IFSC:</span>{" "}
+                    {finalComp.ifscCode}
+                  </div>
+                  <div>
+                    <span className="font-bold text-black">Branch:</span>{" "}
+                    {finalComp.branchName}
+                  </div>
+                  <div className="pt-1">
+                    <span className="font-bold text-black">Name:</span>{" "}
+                    {finalComp.authorizedSignatory}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Signature Block */}
             <div className="flex justify-between items-end pt-8 px-2 text-xs">
-              <span className="text-gray-400 font-mono text-[9px]">Invoice Created via Alpha Wholesale ERP</span>
+              <span className="text-gray-400 font-mono text-[9px]">
+                Invoice Created via Alpha Wholesale ERP
+              </span>
               <div className="text-center w-52 border-t border-black pt-1">
                 <p className="text-[10px] font-bold">Authorized Signatory</p>
-                <p className="text-[10px] text-gray-500 italic mt-1">For {finalComp.companyName}</p>
+                <p className="text-[10px] text-gray-500 italic mt-1">
+                  For {finalComp.companyName}
+                </p>
               </div>
             </div>
           </div>
@@ -1097,7 +1571,10 @@ export default function Bills() {
           <h1 className="text-2xl font-bold text-[#1e2a4a] flex items-center gap-2">
             <FileText className="w-6 h-6 text-[#c4703f]" /> Tax Invoices
           </h1>
-          <p className="text-[#6b7280] text-sm">Create and print legal tax bills split with dynamic CGST, SGST, and IGST.</p>
+          <p className="text-[#6b7280] text-sm">
+            Create and print legal tax bills split with dynamic CGST, SGST, and
+            IGST.
+          </p>
         </div>
         <Button
           onClick={openCreate}
@@ -1180,20 +1657,38 @@ export default function Bills() {
                 ) : table.filteredData.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-8 text-gray-400">
-                      No tax invoices generated yet. Click "New Bill" to create your first bill!
+                      No tax invoices generated yet. Click "New Bill" to create
+                      your first bill!
                     </td>
                   </tr>
                 ) : (
                   table.filteredData.map((bill: any) => (
-                    <tr key={bill.id} className="hover:bg-[#fbf9f5] transition-colors">
-                      <td className="py-3.5 px-4 font-semibold text-[#1e2a4a] font-mono">{bill.billNumber}</td>
-                      <td className="py-3.5 px-4 text-gray-600">
-                        {new Date(bill.billDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                    <tr
+                      key={bill.id}
+                      className="hover:bg-[#fbf9f5] transition-colors"
+                    >
+                      <td className="py-3.5 px-4 font-semibold text-[#1e2a4a] font-mono">
+                        {bill.billNumber}
                       </td>
-                      <td className="py-3.5 px-4 font-medium text-[#1e2a4a]">{bill.buyerName}</td>
-                      <td className="py-3.5 px-4 font-mono text-xs text-gray-500">{bill.buyerGst || "N/A"}</td>
+                      <td className="py-3.5 px-4 text-gray-600">
+                        {new Date(bill.billDate).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-[#1e2a4a]">
+                        {bill.buyerName}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-xs text-gray-500">
+                        {bill.buyerGst || "N/A"}
+                      </td>
                       <td className="py-3.5 px-4 text-right font-black font-mono text-[#c4703f]">
-                        ₹{parseFloat(bill.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹
+                        {parseFloat(bill.totalAmount).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">

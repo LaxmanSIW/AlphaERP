@@ -62,6 +62,8 @@ export const settingsRouter = createRouter({
       z.object({
         companyName: z.string().min(1),
         address: z.string().min(1),
+        state: z.string().optional(),
+        stateCode: z.string().optional(),
         phone: z.string().min(1),
         email: z.string().email(),
         gstNumber: z.string().min(1),

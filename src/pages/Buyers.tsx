@@ -1,3 +1,4 @@
+import { INDIA_STATES } from "@/lib/states";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import {
@@ -403,11 +404,26 @@ export default function Buyers() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[#1e2a4a]">State</Label>
-                  <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="State" className="bg-[#f5f0e8] border-[#d9cfc0]" />
+                  <select
+                    value={form.stateCode || ""}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      const s = INDIA_STATES.find(x => x.code === code);
+                      if (s) {
+                        setForm({ ...form, stateCode: s.code, state: s.name });
+                      }
+                    }}
+                    className="flex h-9 w-full rounded-md border border-[#d9cfc0] bg-[#f5f0e8] px-3 py-1 text-sm focus:border-[#c4703f] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#c4703f]"
+                  >
+                    <option value="" disabled>Select State</option>
+                    {INDIA_STATES.map((s) => (
+                      <option key={s.code} value={s.code}>{s.name} ({s.code})</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[#1e2a4a]">State Code</Label>
-                  <Input value={form.stateCode} onChange={(e) => setForm({ ...form, stateCode: e.target.value })} placeholder="Code" className="bg-[#f5f0e8] border-[#d9cfc0] font-mono" />
+                  <Input value={form.stateCode} readOnly placeholder="Code" className="bg-[#f5f0e8] border-[#d9cfc0] font-mono opacity-70" />
                 </div>
               </div>
               <div className="space-y-2">
